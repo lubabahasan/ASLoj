@@ -2,6 +2,7 @@ body {
     font-family: Arial, sans-serif;
     background: #f9f9f9;
     padding: 20px;
+    margin: 0;
 }
 form {
     background: #fff;
@@ -14,4 +15,101 @@ button {
     padding: 8px 12px;
     border: none;
     border-radius: 3px;
+}
+
+/* =============== */
+
+:root{
+    --lavender: #b49fcc;
+    --magenta: #9a1a7a;
+    --cyan: #52d1dc;
+    --blue: #3e4a9d;
+    --navy_blue: #2c3e50;
+    --blue_grey: #34495e;
+
+    --primary-color: #1a73e8;
+    --secondary-color: #f8f9fa;
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --info-color: #17a2b8;
+}
+
+/* Navbar container */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--blue);
+    padding: 1rem, 0;
+}
+
+/* Logo / brand */
+.navbar .logo {
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+    text-decoration: none;
+    margin: 0 2rem;
+}
+
+.navbar .logo img {
+    height: 70px;
+    width: auto;
+    max-width: 150px;
+}
+
+/* Navbar links */
+.navbar ul {
+    list-style: none;
+    display: flex;
+    margin: 0;
+    padding: 0;
+
+    margin: 0 2rem;
+}
+
+.navbar ul li {
+    margin-left: 2rem;
+}
+
+.navbar ul li a {
+    color: white;
+    text-decoration: none;
+    font-size: 16px;
+}
+
+.navbar ul li a:hover {
+    text-decoration: underline;
+}
+
+/* Hamburger menu (mobile only) */
+.menu-toggle {
+    display: none;
+    font-size: 24px;
+    color: white;
+    cursor: pointer;
+    margin: 0 2rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .navbar ul {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        background-color:  var(--blue);
+        position: absolute;
+        top: 60px;
+        left: 0;
+    }
+
+    .navbar ul.show {
+        display: flex;
+    }
+
+    .menu-toggle {
+        display: block;
+        margin: 0 2rem;
+    }
 }
