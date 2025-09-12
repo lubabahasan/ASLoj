@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Home</title>
+</head>
+<body>
+    <h2>Welcome, {{ request.user.full_name }}</h2>
+    <a href="{% url 'logout' %}">Logout</a>
+    <h2><i>One solve a day keeps the unemployment away</i></h2>
+</body>
+</html>
