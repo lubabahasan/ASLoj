@@ -113,3 +113,137 @@ button {
         margin: 0 2rem;
     }
 }
+
+/* ============ */
+
+.profile-header {
+    background: linear-gradient(135deg, var(--magenta) 0%, var(--blue) 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 15px 15px 0 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.profile-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.1);
+    transform: rotate(45deg);
+}
+
+.profile-avatar {
+    width: 120px;
+    height: 120px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.rating-badge, badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.bg-light {
+    background: var(--blue_grey);
+}
+
+.rating-master { background: linear-gradient(45deg, #ff6b6b, #ee5a24); color: white; }
+.rating-expert { background: linear-gradient(45deg, #4834d4, #686de0); color: white; }
+.rating-specialist { background: linear-gradient(45deg, #00d2d3, #54a0ff); color: white; }
+.rating-pupil { background: linear-gradient(45deg, #5f27cd, #a55eea); color: white; }
+.rating-newbie { background: linear-gradient(45deg, #74b9ff, #0984e3); color: white; }
+
+.card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.stat-card {
+    text-align: center;
+    padding: 2rem 1rem;
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.stat-label {
+    color: #666;
+    font-weight: 500;
+}
+
+.progress-custom {
+    height: 8px;
+    border-radius: 4px;
+    background-color: red;
+}
+
+.progress-bar-custom {
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--success-color), var(--info-color));
+}
+
+.achievement-badge {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    margin: 0.25rem;
+    background: var(--cyan);
+    color: #333;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.contest-history {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.contest-item {
+    border-left: 4px solid var(--primary-color);
+    padding-left: 1rem;
+    margin-bottom: 1rem;
+}
+
+.contest-rating-up {
+    color: var(--success-color);
+}
+
+.contest-rating-down {
+    color: var(--danger-color);
+}
+
+@media (max-width: 768px) {
+
+    .profile-header {
+        text-align: center;
+    }
+
+    .stat-number {
+        font-size: 2rem;
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.8s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
