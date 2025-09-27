@@ -1,5 +1,4 @@
-
-/* ===== Global Reset ===== */
+/* ===== Global ===== */
 * {
     margin: 0;
     padding: 0;
@@ -99,6 +98,31 @@ body {
     margin-bottom: 4px;
     display: block;
     transition: color 0.3s ease;
+}
+
+/* ===== Input Fields ===== */
+.auth-form input,
+.auth-form .form-input {
+    width: 100%;
+    padding: 12px 14px;        
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.auth-form input:focus,
+.auth-form .form-input:focus {
+    border-color: #9A1A7A;
+    box-shadow: 0 0 5px rgba(154, 26, 122, 0.3);
+}
+
+/* When invalid */
+.auth-form input.is-invalid{
+    border-color: #e74c3c;
+    background: #fdf2f2;
+    animation: shake 0.3s ease-in-out;
 }
 
 /* ===== Error Messages ===== */
@@ -210,6 +234,17 @@ body {
         padding: 12px;
         font-size: 0.95rem;
     }
+
 }
+
+
+
+
+
+
+
+
+
+
 
 

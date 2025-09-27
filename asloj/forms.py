@@ -1,5 +1,5 @@
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm
 from .models import User
 
 
@@ -28,3 +28,12 @@ class UserLoginForm(AuthenticationForm):
         if not username.endswith("@uap-bd.edu"):
             raise forms.ValidationError("Invalid email address")
         return username
+    
+class CustomPasswordResetForm(PasswordResetForm):
+    email = forms.EmailField(label="Email", max_length=254)
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if not User.objects.filter(email=email, is_active=True).exists():
+            raise forms.ValidationError("Invalid email address")
+        return email

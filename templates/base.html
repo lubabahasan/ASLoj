@@ -21,113 +21,63 @@
     </div>
 
     <script>
-        // JavaScript to handle error styling
-        document.addEventListener('DOMContentLoaded', function() {
-            // Find all error messages
-            const errorMessages = document.querySelectorAll('.error-msg');
+    document.addEventListener('DOMContentLoaded', function() {
+        // Highlight fields with existing errors
+        const errorMessages = document.querySelectorAll('.error-msg');
 
-            errorMessages.forEach(function(errorMsg) {
-                // Find the previous input field
-                let inputField = errorMsg.previousElementSibling;
+        errorMessages.forEach(function(errorMsg) {
+            let inputField = errorMsg.previousElementSibling;
 
-                // If previous element is not an input, look for input before that
-                while (inputField && inputField.tagName !== 'INPUT') {
-                    inputField = inputField.previousElementSibling;
-                }
-
-                // Add error class to input field
-                if (inputField) {
-                    inputField.classList.add('is-invalid');
-                }
-            });
-
-            // Also check for non-field errors and style the form
-            const nonFieldErrors = document.querySelector('.error-msg');
-            if (nonFieldErrors) {
-                const form = document.querySelector('.auth-form');
-                if (form) {
-                    form.classList.add('has-errors');
-                }
+            while (inputField && inputField.tagName !== 'INPUT') {
+                inputField = inputField.previousElementSibling;
             }
 
-            // Add real-time validation
-            const inputs = document.querySelectorAll('.auth-form input');
-            inputs.forEach(function(input) {
-                input.addEventListener('blur', function() {
-                    validateInput(this);
-                });
-
-                input.addEventListener('input', function() {
-                    // Remove error styling when user starts typing
-                    if (this.classList.contains('is-invalid')) {
-                        this.classList.remove('is-invalid');
-                        // Hide associated error message
-                        const nextError = this.parentNode.querySelector('.error-msg');
-                        if (nextError) {
-                            nextError.style.display = 'none';
-                        }
-                    }
-                });
-            });
-
-            function validateInput(input) {
-                const value = input.value.trim();
-                let isValid = true;
-                let errorMessage = '';
-
-                // Email validation
-                if (input.type === 'email' || input.name === 'username' || input.name === 'email') {
-                    if (!value.endsWith('@uap-bd.edu')) {
-                        isValid = false;
-                        errorMessage = 'Email must end with @uap-bd.edu';
-                    } else if (!value.includes('@')) {
-                        isValid = false;
-                        errorMessage = 'Please enter a valid email address';
-                    }
-                }
-
-                // Password validation
-                if (input.type === 'password') {
-                    if (value.length < 8) {
-                        isValid = false;
-                        errorMessage = 'Password must be at least 8 characters long';
-                    }
-                }
-
-                // Required field validation
-                if (input.hasAttribute('required') && !value) {
-                    isValid = false;
-                    errorMessage = 'This field is required';
-                }
-
-                // Apply styling
-                if (!isValid) {
-                    input.classList.add('is-invalid');
-                    showError(input, errorMessage);
-                } else {
-                    input.classList.remove('is-invalid');
-                    hideError(input);
-                }
-            }
-
-            function showError(input, message) {
-                let errorElement = input.parentNode.querySelector('.js-error-msg');
-                if (!errorElement) {
-                    errorElement = document.createElement('p');
-                    errorElement.className = 'error-msg js-error-msg';
-                    input.parentNode.insertBefore(errorElement, input.nextSibling);
-                }
-                errorElement.textContent = message;
-                errorElement.style.display = 'block';
-            }
-
-            function hideError(input) {
-                const errorElement = input.parentNode.querySelector('.js-error-msg');
-                if (errorElement) {
-                    errorElement.style.display = 'none';
-                }
+            if (inputField) {
+                inputField.classList.add('is-invalid');
             }
         });
+
+
+        // Real-time validation on blur and input
+        const inputs = document.querySelectorAll('.auth-form input');
+        inputs.forEach(function(input) {
+            input.addEventListener('blur', function() {
+                validateInput(this);
+            });
+
+            input.addEventListener('input', function() {
+                if (this.classList.contains('is-invalid')) {
+                    this.classList.remove('is-invalid');
+                }
+            });
+        });
+
+        function validateInput(input) {
+            const value = input.value.trim();
+            let isValid = true;
+
+            // Email validation
+            if (input.type === 'email' || input.name === 'username' || input.name === 'email') {
+                if (!value.includes('@') || !value.endsWith('@uap-bd.edu')) {
+                    isValid = false;
+                }
+            }
+
+
+            // Required field validation
+            if (input.hasAttribute('required') && !value) {
+                isValid = false;
+            }
+
+            // Apply visual styling
+            if (!isValid) {
+                input.classList.add('is-invalid');
+            } else {
+                input.classList.remove('is-invalid');
+            }
+        }
+    });
     </script>
+
 </body>
 </html>
