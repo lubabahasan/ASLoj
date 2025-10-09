@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm
-from .models import User
+from django.forms import inlineformset_factory
+from .models import User, Problem, Example
 
 
 class UserSignupForm(forms.ModelForm):
@@ -37,3 +38,15 @@ class CustomPasswordResetForm(PasswordResetForm):
         if not User.objects.filter(email=email, is_active=True).exists():
             raise forms.ValidationError("Invalid email address")
         return email
+
+class ProblemForm(forms.ModelForm):
+    class Meta:
+        model = Problem
+        fields = ['title', 'statement', 'input_specification', 'output_specification', 'difficulty', 'time_limit']
+
+ExampleFormSet = inlineformset_factory(
+    Problem, Example,
+    fields=['input', 'output', 'note'],
+    extra=1,
+    can_delete=True
+)

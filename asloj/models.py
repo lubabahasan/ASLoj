@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+from mysite import settings
 
 class UserManager(BaseUserManager):
     def create_user(self, email, full_name, university_id, password=None):
@@ -47,3 +48,26 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
+class Problem(models.Model):
+    problem_id = models.AutoField(primary_key=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='problems')
+
+    title = models.CharField(max_length=200)
+    statement = models.TextField()
+    input_specification = models.TextField()
+    output_specification = models.TextField()
+    difficulty = models.CharField(max_length=10, choices=[('Easy','Easy'),('Medium','Medium'),('Hard','Hard')], default='Easy')
+    time_limit = models.IntegerField(default=1)  # in seconds
+
+    def __str__(self):
+        return f"{self.title}"
+
+class Example(models.Model):
+    problem = models.ForeignKey(Problem, on_delete=models.CASCADE, related_name='examples')
+    input = models.TextField()
+    output = models.TextField()
+    note = models.TextField(blank=True, null=True)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']

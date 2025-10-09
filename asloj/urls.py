@@ -8,6 +8,13 @@ urlpatterns = [
     path("signup/", views.signup_view, name="signup"),
     path("logout/", views.logout_view, name="logout"),
     path("home/", views.home_view, name="home"),
+    path("profile/", views.profile_view, name="profile"),
+
+    path('problems/', views.problems_view, name='problems'),  # problem list
+    path('problems/<int:pk>/', views.problem_detail, name='problem_detail'),
+    path('problems/crud/', views.problem_crud, name='problem_crud'),  # add new
+    path('problems/crud/<int:pk>/', views.problem_crud, name='problem_crud'),  # edit existing
+    path('problems/delete/<int:pk>/', views.problem_delete, name='problem_delete'),
 
 
     path('password-reset/', auth_views.PasswordResetView.as_view(
