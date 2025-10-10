@@ -3,6 +3,9 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from .forms import UserSignupForm, UserLoginForm, ProblemForm, ExampleFormSet
 from .models import Problem
+from .models import Contest
+from .forms import ContestForm
+from django.utils import timezone
 
 def signup_view(request):
     if request.method == "POST":
@@ -88,3 +91,67 @@ def problem_detail(request, pk):
     problem = get_object_or_404(Problem, pk=pk)
     return render(request, 'problem_detail.html', {'problem': problem})
 
+
+@login_required
+def contest_list(request):
+    status = request.GET.get('status', '')
+    now = timezone.now()
+    contests = Contest.objects.all()
+
+    if status == 'upcoming':
+        contests = contests.filter(start_time__gt=now)
+    elif status == 'running':
+        contests = contests.filter(start_time__lte=now, end_time__gte=now)
+    elif status == 'finished':
+        contests = contests.filter(end_time__lt=now)
+
+    return render(request, 'contests/contest_list.html', {'contests': contests})
+
+@login_required
+def contest_detail(request, pk):
+    contest = get_object_or_404(Contest, pk=pk)
+    return render(request, 'contests/contest_detail.html', {'contest': contest})
+
+@login_required
+def contest_create(request):
+    # Only allow admin to create contest
+    if not request.user.is_staff:
+        return redirect('contest_list')
+
+    if request.method == 'POST':
+        form = ContestForm(request.POST)
+        if form.is_valid():
+            contest = form.save(commit=False)
+            contest.creator = request.user  # ✅ Add creator properly
+            contest.save()
+            form.save_m2m()
+            return redirect('contest_list')
+    else:
+        form = ContestForm()  # ✅ Initialize for GET requests
+
+        # ✅ Always return a context that includes 'form'
+    return render(request, 'contests/contest_form.html', {'form': form})
+
+@login_required
+def contest_update(request, pk):
+    contest = get_object_or_404(Contest, pk=pk, creator=request.user)
+    if request.method == 'POST':
+        form = ContestForm(request.POST, instance=contest)
+        if form.is_valid():
+            form.save()
+            return redirect('contest_detail', pk=pk)
+    else:
+        form = ContestForm(instance=contest)
+    return render(request, 'contests/create_contest.html', {'form': form})
+
+@login_required
+def contest_delete(request, pk):
+    contest = get_object_or_404(Contest, pk=pk, creator=request.user)
+    if request.method == 'POST':
+        contest.delete()
+        return redirect('contest_list')
+    return render(request, 'contests/contest_confirm_delete.html', {'contest': contest})
+
+def contest_detail(request, pk):
+    contest = get_object_or_404(Contest, pk=pk)
+    return render(request, 'contests/contest_detail.html', {'contest': contest})

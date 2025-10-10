@@ -1,6 +1,7 @@
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin, User
 from django.db import models
 from mysite import settings
+from django.utils import timezone
 
 class UserManager(BaseUserManager):
     def create_user(self, email, full_name, university_id, password=None):
@@ -71,3 +72,19 @@ class Example(models.Model):
 
     class Meta:
         ordering = ['order']
+
+
+class Contest(models.Model):
+    name = models.CharField(max_length=255)
+    description = models.TextField()
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
+    problems = models.ManyToManyField(Problem, blank=True, related_name='contests')
+    creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_contests')
+
+    def __str__(self):
+        return self.name
+
+    def is_active(self):
+        now = timezone.now()
+        return self.start_time <= now <= self.end_time

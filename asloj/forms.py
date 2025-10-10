@@ -2,6 +2,8 @@ from django import forms
 from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm
 from django.forms import inlineformset_factory
 from .models import User, Problem, Example
+from .models import Contest
+from django.core.exceptions import ValidationError
 
 
 class UserSignupForm(forms.ModelForm):
@@ -50,3 +52,25 @@ ExampleFormSet = inlineformset_factory(
     extra=1,
     can_delete=True
 )
+
+class ContestForm(forms.ModelForm):
+    class Meta:
+        model = Contest
+        fields = ['name', 'description', 'start_time', 'end_time', 'problems']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'problems': forms.SelectMultiple(attrs={'class': 'form-select'}),
+            'start_time': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'end_time': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start_time = cleaned_data.get('start_time')
+        end_time = cleaned_data.get('end_time')
+
+        if start_time and end_time and start_time >= end_time:
+            raise ValidationError("End time must be after start time.")
+
+        return cleaned_data

@@ -17,6 +17,13 @@ urlpatterns = [
     path('problems/delete/<int:pk>/', views.problem_delete, name='problem_delete'),
 
 
+    path('contests/', views.contest_list, name='contest_list'),
+    path('create/', views.contest_create, name='contest_create'),
+    path('contests/<int:pk>/', views.contest_detail, name='contest_detail'),
+    path('create/', views.contest_create, name='contest_create'),
+    path('<int:pk>/update/', views.contest_update, name='contest_update'),
+    path('<int:pk>/delete/', views.contest_delete, name='contest_delete'),
+
     path('password-reset/', auth_views.PasswordResetView.as_view(
         form_class=CustomPasswordResetForm,
         template_name='password_generic.html',
