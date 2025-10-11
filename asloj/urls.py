@@ -9,6 +9,7 @@ urlpatterns = [
     path("logout/", views.logout_view, name="logout"),
     path("home/", views.home_view, name="home"),
     path("profile/", views.profile_view, name="profile"),
+    path('leaderboard/', views.leaderboard_view, name='leaderboard'),
 
     path('problems/', views.problems_view, name='problems'),  # problem list
     path('problems/<int:pk>/', views.problem_detail, name='problem_detail'),

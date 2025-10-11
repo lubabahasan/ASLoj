@@ -40,6 +40,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
 
     phone = models.CharField(max_length=20, blank=True, null=True)
+    points = models.IntegerField(default=0)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["full_name", "university_id"]

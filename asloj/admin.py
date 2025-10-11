@@ -5,15 +5,15 @@ from .models import User, Problem
 
 class UserAdmin(BaseUserAdmin):
     # Fields to display in the user list
-    list_display = ('email', 'full_name', 'university_id', 'phone', 'is_active', 'is_staff', 'is_superuser')
+    list_display = ('email', 'full_name', 'university_id', 'phone', 'points', 'is_active', 'is_staff', 'is_superuser')
     list_filter = ('is_active', 'is_staff', 'is_superuser')
-    search_fields = ('email', 'full_name', 'university_id', 'phone')
+    search_fields = ('email', 'full_name', 'university_id', 'phone', 'points')
     ordering = ('email',)
 
     # Fields for user detail/edit page
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
-        ('Personal info', {'fields': ('full_name', 'university_id', 'phone')}),
+        ('Personal info', {'fields': ('full_name', 'university_id', 'phone', 'points')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Important dates', {'fields': ('last_login',)}),
     )

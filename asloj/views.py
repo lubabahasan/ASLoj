@@ -7,6 +7,9 @@ from .models import Contest
 from .forms import ContestForm
 from django.utils import timezone
 
+from django.core.paginator import Paginator
+from django.contrib.auth import get_user_model
+
 def signup_view(request):
     if request.method == "POST":
         form = UserSignupForm(request.POST)
@@ -155,3 +158,27 @@ def contest_delete(request, pk):
 def contest_detail(request, pk):
     contest = get_object_or_404(Contest, pk=pk)
     return render(request, 'contests/contest_detail.html', {'contest': contest})
+
+
+User = get_user_model()
+def leaderboard_view(request):
+    # Get all users ordered by points descending
+    users = User.objects.order_by('-points')
+
+    # Pagination: 10 per page
+    paginator = Paginator(users, 15)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    # Find logged-in user rank
+    user_rank = None
+    if request.user.is_authenticated:
+        user_list = list(users.values_list('id', flat=True))
+        if request.user.id in user_list:
+            user_rank = user_list.index(request.user.id) + 1  # +1 because rank starts from 1
+
+    context = {
+        'page_obj': page_obj,
+        'user_rank': user_rank
+    }
+    return render(request, 'leaderboard.html', context)
