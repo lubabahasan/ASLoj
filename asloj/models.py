@@ -1,7 +1,9 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin, User
+from django.core.validators import FileExtensionValidator
 from django.db import models
 from mysite import settings
 from django.utils import timezone
+from ckeditor.fields import RichTextField
 
 class UserManager(BaseUserManager):
     def create_user(self, email, full_name, university_id, password=None):
@@ -31,7 +33,6 @@ class UserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-
 class User(AbstractBaseUser, PermissionsMixin):
     full_name = models.CharField(max_length=200)
     university_id = models.CharField(max_length=50, unique=True)
@@ -42,6 +43,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     phone = models.CharField(max_length=20, blank=True, null=True)
     points = models.IntegerField(default=0)
 
+    pfp = models.ImageField(
+        upload_to='pfp/',
+        blank=True,
+        null=True,
+        default='pfp/default.jpeg',
+        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png'])]
+    )
+
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["full_name", "university_id"]
 
@@ -50,19 +59,36 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
+
 class Problem(models.Model):
     problem_id = models.AutoField(primary_key=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='problems')
 
-    title = models.CharField(max_length=200)
-    statement = models.TextField()
-    input_specification = models.TextField()
-    output_specification = models.TextField()
-    difficulty = models.CharField(max_length=10, choices=[('Easy','Easy'),('Medium','Medium'),('Hard','Hard')], default='Easy')
+    title = models.CharField(max_length=255)
+    statement = RichTextField()
+    input_specification = RichTextField()
+    output_specification = RichTextField()
+    difficulty = models.CharField(max_length=10, choices=[('Easy', 'Easy'), ('Medium', 'Medium'), ('Hard', 'Hard')],
+                                  default='Easy')
     time_limit = models.IntegerField(default=1)  # in seconds
 
     def __str__(self):
         return f"{self.title}"
+
+def test_input_upload_to(instance, filename):
+    return f"problems/{instance.problem.problem_id}/test_inputs/{filename}"
+
+def test_output_upload_to(instance, filename):
+    return f"problems/{instance.problem.problem_id}/test_outputs/{filename}"
+
+class TestInput(models.Model):
+    problem = models.ForeignKey('Problem', on_delete=models.CASCADE, related_name='test_inputs')
+    file = models.FileField(upload_to=test_input_upload_to)
+
+class TestOutput(models.Model):
+    problem = models.ForeignKey('Problem', on_delete=models.CASCADE, related_name='test_outputs')
+    file = models.FileField(upload_to=test_output_upload_to)
+
 
 class Example(models.Model):
     problem = models.ForeignKey(Problem, on_delete=models.CASCADE, related_name='examples')
@@ -73,6 +99,34 @@ class Example(models.Model):
 
     class Meta:
         ordering = ['order']
+
+class Submission(models.Model):
+    id = models.BigAutoField(primary_key=True)
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='submissions')
+    problem = models.ForeignKey(Problem, on_delete=models.CASCADE, related_name='submissions')
+    code_file = models.FileField(upload_to="submissions/")
+
+    LANGUAGE_CHOICES = [
+        ("py", "Python"),
+        ("c", "C"),
+        ("cpp", "C++"),
+        ("java", "Java"),
+        ("js", "JavaScript"),
+    ]
+
+    STATUS_CHOICES = [
+        ("P", "Pending"),
+        ("AC", "Accepted"),
+        ("WA", "Wrong Answer"),
+        ("RE", "Runtime Error"),
+        ("TLE", "Time Limit Exceeded"),
+    ]
+
+    language = models.CharField(max_length=10, choices=LANGUAGE_CHOICES, )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="P")
+
+    created_at = models.DateTimeField(auto_now_add=True)
 
 
 class Contest(models.Model):

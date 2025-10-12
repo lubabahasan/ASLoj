@@ -1,17 +1,17 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm
 from django.forms import inlineformset_factory
-from .models import User, Problem, Example
-from .models import Contest
-from django.core.exceptions import ValidationError
 
+from .models import User, Problem, Example, Submission, Contest
+from django.core.exceptions import ValidationError
 
 class UserSignupForm(forms.ModelForm):
     password = forms.CharField(widget=forms.PasswordInput())
+    pfp = forms.ImageField(required=False)
 
     class Meta:
         model = User
-        fields = ["full_name", "university_id", "email", "password"]
+        fields = ["full_name", "university_id", "email", "password", "pfp"]
 
     def clean_email(self):
         email = self.cleaned_data.get("email")
@@ -20,7 +20,6 @@ class UserSignupForm(forms.ModelForm):
         if User.objects.filter(email=email).exists():
             raise forms.ValidationError("This email is already registered")
         return email
-
 
 class UserLoginForm(AuthenticationForm):
     username = forms.EmailField(widget=forms.EmailInput())
@@ -42,16 +41,27 @@ class CustomPasswordResetForm(PasswordResetForm):
         return email
 
 class ProblemForm(forms.ModelForm):
+
     class Meta:
         model = Problem
-        fields = ['title', 'statement', 'input_specification', 'output_specification', 'difficulty', 'time_limit']
+        fields = ['title', 'difficulty', 'time_limit', 'statement', 'input_specification', 'output_specification']
 
 ExampleFormSet = inlineformset_factory(
     Problem, Example,
     fields=['input', 'output', 'note'],
     extra=1,
-    can_delete=True
+    can_delete=True,
+    widgets={
+        'input': forms.Textarea(attrs={'rows': 5, 'class': 'form-control'}),
+        'output': forms.Textarea(attrs={'rows': 5, 'class': 'form-control'}),
+        'note': forms.Textarea(attrs={'rows': 6, 'class': 'form-control'}),
+    }
 )
+
+class SubmissionForm(forms.ModelForm):
+    class Meta:
+        model = Submission
+        fields = ['language', 'code_file']
 
 class ContestForm(forms.ModelForm):
     class Meta:

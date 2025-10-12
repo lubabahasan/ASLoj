@@ -1,18 +1,17 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, logout
+from django.contrib import messages
+from django.contrib.auth import login, logout, get_user_model
 from django.contrib.auth.decorators import login_required
-from .forms import UserSignupForm, UserLoginForm, ProblemForm, ExampleFormSet
-from .models import Problem
-from .models import Contest
-from .forms import ContestForm
-from django.utils import timezone
-
 from django.core.paginator import Paginator
-from django.contrib.auth import get_user_model
+from django.utils import timezone
+from django.db.models import Count
+from .forms import UserSignupForm, UserLoginForm, ProblemForm, SubmissionForm, ContestForm, ExampleFormSet
+from .models import Problem, Submission, Contest, TestInput, TestOutput
+
 
 def signup_view(request):
     if request.method == "POST":
-        form = UserSignupForm(request.POST)
+        form = UserSignupForm(request.POST, request.FILES)
         if form.is_valid():
             user = form.save(commit=False)
             user.set_password(form.cleaned_data["password"])
@@ -22,7 +21,6 @@ def signup_view(request):
     else:
         form = UserSignupForm()
     return render(request, "signup.html", {"form": form})
-
 
 def login_view(request):
     if request.method == "POST":
@@ -40,10 +38,30 @@ def home_view(request):
     return render(request, "home.html")
 
 def profile_view(request):
-    return render(request, "profile.html")
+    user = request.user
+    recent_submissions = Submission.objects.filter(user=user).order_by('-created_at')[:5]  # last 5 submissions
+    problem_counts = Problem.objects.filter(submissions__user=user, submissions__status='AC') \
+        .values('difficulty') \
+        .annotate(count=Count('problem_id'))
+
+    difficulty_stats = {'Easy': 0, 'Medium': 0, 'Hard': 0}
+    for entry in problem_counts:
+        difficulty_stats[entry['difficulty']] = entry['count']
+
+    max_rating = 1847
+    problems_solved = sum(difficulty_stats.values())
+    contests_count = 23
+
+    return render(request, "profile.html",{
+        'recent_submissions': recent_submissions,
+        'difficulty_stats': difficulty_stats,
+        'problems_solved': problems_solved,
+        'contests_count': contests_count,
+        'max_rating': max_rating,
+    })
 
 def problems_view(request):
-    problems = Problem.objects.all()
+    problems = Problem.objects.all().order_by('problem_id')
 
     difficulty = request.GET.get('difficulty')
     created_by = request.GET.get('created_by')
@@ -54,7 +72,7 @@ def problems_view(request):
     if created_by:
         problems = problems.filter(created_by__email__icontains=created_by)
 
-    return render(request, 'problems.html', {'problems': problems})
+    return render(request, 'problems/problems.html', {'problems': problems})
 
 def logout_view(request):
     logout(request)
@@ -68,20 +86,21 @@ def problem_crud(request, pk=None):
     else:
         problem = Problem(created_by=request.user)
 
+    example_form = ExampleFormSet(request.POST or None, instance=problem)
+
     if request.method == 'POST':
         form = ProblemForm(request.POST, instance=problem)
-        formset = ExampleFormSet(request.POST, instance=problem)
-        if form.is_valid() and formset.is_valid():
+        if form.is_valid() and example_form.is_valid():
             problem = form.save(commit=False)
             problem.created_by = request.user
             problem.save()
-            formset.save()
-            return redirect('problem_detail', pk=problem.pk)
+            example_form.instance = problem
+            example_form.save()
+            return redirect('problems')
     else:
         form = ProblemForm(instance=problem)
-        formset = ExampleFormSet(instance=problem)
 
-    return render(request, 'problem_crud.html', {'form': form, 'formset': formset})
+    return render(request, 'problems/problem_crud.html', {'form': form, 'formset': example_form})
 
 @login_required
 def problem_delete(request, pk):
@@ -90,9 +109,54 @@ def problem_delete(request, pk):
         problem.delete()
     return redirect('problems')
 
+@login_required
 def problem_detail(request, pk):
     problem = get_object_or_404(Problem, pk=pk)
-    return render(request, 'problem_detail.html', {'problem': problem})
+    submission_form = SubmissionForm(initial={'problem': problem})
+    return render(request, 'problems/problem_detail.html', {
+        'problem': problem,
+        'submission_form': submission_form,
+    })
+
+
+@login_required
+def submit_solution(request, pk):
+    problem = get_object_or_404(Problem, pk=pk)
+
+    if request.method == 'POST':
+        form = SubmissionForm(request.POST, request.FILES)
+        if form.is_valid():
+            submission = form.save(commit=False)
+            submission.user = request.user
+            submission.problem = problem
+            submission.save()
+            messages.success(request, "Submission uploaded successfully!")
+            return redirect('submission_detail', pk=submission.pk)
+        else:
+            messages.error(request, "There was an error with your submission.")
+            return render(request, 'problems/problem_detail.html', {
+                'problem': problem,
+                'submission_form': form,
+            })
+    return redirect('problem_detail', pk=problem.pk)
+
+def submission_list(request):
+    submissions = Submission.objects.filter(user=request.user).order_by('-created_at')
+    return render(request, 'submissions/submission_list.html', {'submissions': submissions})
+
+def submission_detail(request, pk):
+    submission = get_object_or_404(Submission, pk=pk, user=request.user)
+
+    code_content = ""
+    if submission.code_file:
+        submission.code_file.open('r')
+        code_content = submission.code_file.read()
+        submission.code_file.close()
+
+    return render(request, 'submissions/submission_detail.html', {
+        'submission': submission,
+        'code_content': code_content
+    })
 
 
 @login_required

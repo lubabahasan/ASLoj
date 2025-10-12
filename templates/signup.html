@@ -15,7 +15,7 @@
         </div>
     {% endif %}
 
-    <form method="POST" class="auth-form">
+    <form method="POST" enctype="multipart/form-data" class="auth-form">
         {% csrf_token %}
 
         <!-- Full Name -->
@@ -50,6 +50,15 @@
         {{ form.password }}
         {% if form.password.errors %}
             {% for error in form.password.errors %}
+                <p class="error-msg">{{ error }}</p>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Profile Picture -->
+        <label for="id_pfp">Profile Picture (optional)</label>
+        {{ form.pfp }}
+        {% if form.pfp.errors %}
+            {% for error in form.pfp.errors %}
                 <p class="error-msg">{{ error }}</p>
             {% endfor %}
         {% endif %}

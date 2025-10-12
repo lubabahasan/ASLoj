@@ -12,25 +12,31 @@
 
     {% include "nav.html" %}
 
-
-    <!--All of this needs to be redone-->
-
    <div class="container mt-4 fade-in">
         <!-- Profile Header -->
         <div class="card mb-4">
             <div class="profile-header">
                 <div class="row align-items-center">
                     <div class="col-md-3 text-center">
-                        <img src="https://via.placeholder.com/120x120/4834d4/white?text=JD"
-                             alt="Avatar" class="profile-avatar rounded-circle">
+                        {% if request.user.pfp %}
+                            <img src="{{ request.user.pfp.url }}"
+                                 alt="{{ request.user.full_name }}'s Avatar"
+                                 class="profile-avatar rounded-circle"
+                                 style="width: 120px; height: 120px; object-fit: cover;">
+                        {% else %}
+                            <img src="{% static 'images/default_pfp.png' %}"
+                                 alt="Default Avatar"
+                                 class="profile-avatar rounded-circle"
+                                 style="width: 120px; height: 120px; object-fit: cover;">
+                        {% endif %}
                     </div>
                     <div class="col-md-9">
                         <h2 class="mb-2">{{ request.user.full_name }}</h2>
                         <h5 class="mb-3 opacity-75">{{ request.user.full_name }}</h5>
                         <div class="d-flex flex-wrap gap-3 mb-3">
-                            <span class="rating-badge rating-expert">
-                                <i class="fas fa-star"></i> Expert • 1847
-                            </span>
+<!--                            <span class="rating-badge rating-expert">-->
+<!--                                <i class="fas fa-star"></i> Expert • 1847-->
+<!--                            </span>-->
                             <span class="badge bg-light text-dark">
                                 <i class="fas fa-map-marker-alt">Dhaka, Bangladesh</i>
                             </span>
@@ -40,7 +46,7 @@
                         </div>
                         <div class="row text-center">
                             <div class="col-4">
-                                <div class="h4 mb-0">127</div>
+                                <div class="h4 mb-0">{{ problems_solved }}</div>
                                 <small class="opacity-75">Problems Solved</small>
                             </div>
                             <div class="col-4">
@@ -64,49 +70,42 @@
                 <div class="row mb-4">
                     <div class="col-md-3 mb-3">
                         <div class="card stat-card">
-                            <div class="stat-number text-success">89</div>
+                            <div class="stat-number text-success">{{ difficulty_stats.Easy }}</div>
                             <div class="stat-label">Easy</div>
-                            <div class="progress progress-custom mt-2">
-                                <div class="progress-bar bg-success" style="width: 72%"></div>
-                            </div>
                         </div>
                     </div>
+
                     <div class="col-md-3 mb-3">
                         <div class="card stat-card">
-                            <div class="stat-number text-warning">32</div>
+                            <div class="stat-number text-warning">{{ difficulty_stats.Medium }}</div>
                             <div class="stat-label">Medium</div>
-                            <div class="progress progress-custom mt-2">
-                                <div class="progress-bar bg-warning" style="width: 45%"></div>
-                            </div>
                         </div>
                     </div>
+
                     <div class="col-md-3 mb-3">
                         <div class="card stat-card">
-                            <div class="stat-number text-danger">6</div>
+                            <div class="stat-number text-danger">{{ difficulty_stats.Hard }}</div>
                             <div class="stat-label">Hard</div>
-                            <div class="progress progress-custom mt-2">
-                                <div class="progress-bar bg-danger" style="width: 15%"></div>
-                            </div>
                         </div>
                     </div>
+
                     <div class="col-md-3 mb-3">
                         <div class="card stat-card">
-                            <div class="stat-number text-info">1847</div>
+                            <div class="stat-number text-info">{{ max_rating }}</div>
                             <div class="stat-label">Max Rating</div>
-                            <div class="mt-2">
-                                <i class="fas fa-arrow-up text-success"></i>
-                                <small class="text-success">+42</small>
-                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Recent Submissions -->
                 <div class="card mb-4">
-                    <div class="card-header bg-white">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
                             <i class="fas fa-code-branch"></i> Recent Submissions
                         </h5>
+                        {% if recent_submissions %}
+                        <a href="{% url 'submission_list' %}" class="btn btn-link btn-sm">View All Submissions</a>
+                        {% endif %}
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
@@ -116,36 +115,46 @@
                                         <th>Problem</th>
                                         <th>Language</th>
                                         <th>Verdict</th>
-                                        <th>Time</th>
-                                        <th>Memory</th>
-                                        <th>When</th>
+                                        <th>Submitted At</th>
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    {% for sub in recent_submissions %}
                                     <tr>
-                                        <td><a href="#" class="text-decoration-none">1650A - Deletions of Two Adjacent Letters</a></td>
-                                        <td><span class="badge bg-primary">Python</span></td>
-                                        <td><span class="badge bg-success">Accepted</span></td>
-                                        <td>124 ms</td>
-                                        <td>4.2 MB</td>
-                                        <td>2 hours ago</td>
+                                        <td>
+                                            <a href="{% url 'problem_detail' sub.problem.pk %}" class="text-decoration-none">
+                                                {{ sub.problem.title }}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <span class="badge
+                                                {% if sub.language == 'py' %}bg-primary{% endif %}
+                                                {% if sub.language == 'cpp' %}bg-warning text-dark{% endif %}
+                                                {% if sub.language == 'c' %}bg-secondary text-white{% endif %}
+                                                {% if sub.language == 'java' %}bg-info{% endif %}
+                                                {% if sub.language == 'js' %}bg-dark text-white{% endif %}
+                                            ">
+                                                {{ sub.get_language_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge
+                                                {% if sub.status == 'AC' %}bg-success{% endif %}
+                                                {% if sub.status == 'WA' %}bg-danger{% endif %}
+                                                {% if sub.status == 'RE' %}bg-danger{% endif %}
+                                                {% if sub.status == 'TLE' %}bg-warning text-dark{% endif %}
+                                                {% if sub.status == 'P' %}bg-secondary text-white{% endif %}
+                                            ">
+                                                {{ sub.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>{{ sub.created_at|date:"Y-m-d H:i" }}</td>
                                     </tr>
+                                    {% empty %}
                                     <tr>
-                                        <td><a href="#" class="text-decoration-none">1649B - Game of Ball Passing</a></td>
-                                        <td><span class="badge bg-warning text-dark">C++</span></td>
-                                        <td><span class="badge bg-danger">Wrong Answer</span></td>
-                                        <td>-</td>
-                                        <td>-</td>
-                                        <td>5 hours ago</td>
+                                        <td colspan="4" class="text-center">No recent submissions.</td>
                                     </tr>
-                                    <tr>
-                                        <td><a href="#" class="text-decoration-none">1648A - Weird Sum</a></td>
-                                        <td><span class="badge bg-info">Java</span></td>
-                                        <td><span class="badge bg-success">Accepted</span></td>
-                                        <td>340 ms</td>
-                                        <td>2.1 MB</td>
-                                        <td>1 day ago</td>
-                                    </tr>
+                                    {% endfor %}
                                 </tbody>
                             </table>
                         </div>
@@ -153,14 +162,12 @@
                 </div>
 
                 <!-- Problem Solving Progress -->
-                <div class="card">
+                <div class="card mb-4">
                     <div class="card-header bg-white">
-                        <h5 class="mb-0">
-                            <i class="fas fa-chart-line"></i> Problem Solving Progress
-                        </h5>
+                        <h5 class="mb-0"><i class="fas fa-chart-line"></i> Problem Solving Progress</h5>
                     </div>
                     <div class="card-body">
-                        <canvas id="progressChart" width="400" height="200"></canvas>
+<!--                        heatmap or calender wise problem solves goes here -->
                     </div>
                 </div>
             </div>

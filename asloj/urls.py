@@ -1,7 +1,9 @@
-from django.urls import path, reverse_lazy
-from . import views
+from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
+from django.urls import path, reverse_lazy
+from mysite import settings
 from .forms import CustomPasswordResetForm
+from . import views
 
 urlpatterns = [
     path("", views.login_view, name="login"),
@@ -16,7 +18,10 @@ urlpatterns = [
     path('problems/crud/', views.problem_crud, name='problem_crud'),  # add new
     path('problems/crud/<int:pk>/', views.problem_crud, name='problem_crud'),  # edit existing
     path('problems/delete/<int:pk>/', views.problem_delete, name='problem_delete'),
+    path('problems/<int:pk>/submit/', views.submit_solution, name='submit_solution'),
 
+    path('submissions/', views.submission_list, name='submission_list'),
+    path('submissions/<int:pk>/', views.submission_detail, name='submission_detail'),
 
     path('contests/', views.contest_list, name='contest_list'),
     path('create/', views.contest_create, name='contest_create'),
@@ -75,3 +80,6 @@ urlpatterns = [
         }
     ), name='password_reset_complete'),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
