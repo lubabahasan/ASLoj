@@ -12,6 +12,8 @@ urlpatterns = [
     path("home/", views.home_view, name="home"),
     path("profile/", views.profile_view, name="profile"),
     path('leaderboard/', views.leaderboard_view, name='leaderboard'),
+    path("community/", views.community_view, name="community"),
+    path("discussion/<int:discussion_id>/", views.discussion_detail, name="discussion_detail"),
 
     path('problems/', views.problems_view, name='problems'),  # problem list
     path('problems/<int:pk>/', views.problem_detail, name='problem_detail'),

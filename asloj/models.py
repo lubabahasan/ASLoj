@@ -143,3 +143,23 @@ class Contest(models.Model):
     def is_active(self):
         now = timezone.now()
         return self.start_time <= now <= self.end_time
+
+
+class Discussion(models.Model):
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='discussions')
+    title = models.CharField(max_length=255)
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
+
+
+class Comment(models.Model):
+    discussion = models.ForeignKey(Discussion, on_delete=models.CASCADE, related_name='comments')
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Comment by {self.author.full_name}"

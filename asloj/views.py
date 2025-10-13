@@ -6,7 +6,7 @@ from django.core.paginator import Paginator
 from django.utils import timezone
 from django.db.models import Count
 from .forms import UserSignupForm, UserLoginForm, ProblemForm, SubmissionForm, ContestForm, ExampleFormSet
-from .models import Problem, Submission, Contest, TestInput, TestOutput
+from .models import Problem, Submission, Contest, TestInput, TestOutput, Discussion, Comment, User
 
 
 def signup_view(request):
@@ -35,7 +35,20 @@ def login_view(request):
 
 @login_required
 def home_view(request):
-    return render(request, "home.html")
+    # Top 5 users (by points)
+    top_users = User.objects.order_by('-points')[:8]
+
+    # Active contests (currently running)
+    now = timezone.now()
+    upcoming_contests = Contest.objects.filter(start_time__gt=now).order_by('start_time')[:3]
+    recent_submissions = Submission.objects.filter(user=request.user).order_by('-created_at')[:3]
+
+    context = {
+        'top_users': top_users,
+        "upcoming_contests": upcoming_contests,
+        'recent_submissions': recent_submissions,
+    }
+    return render(request, "home.html", context)
 
 def profile_view(request):
     user = request.user
@@ -246,3 +259,30 @@ def leaderboard_view(request):
         'user_rank': user_rank
     }
     return render(request, 'leaderboard.html', context)
+
+@login_required
+def community_view(request):
+    discussions = Discussion.objects.all().order_by('-created_at')
+
+    if request.method == "POST":
+        title = request.POST.get("title")
+        content = request.POST.get("content")
+        if title and content:
+            Discussion.objects.create(author=request.user, title=title, content=content)
+            return redirect("community")
+
+    return render(request, "community.html", {"discussions": discussions})
+
+
+@login_required
+def discussion_detail(request, discussion_id):
+    discussion = get_object_or_404(Discussion, id=discussion_id)
+    comments = discussion.comments.all().order_by('created_at')
+
+    if request.method == "POST":
+        content = request.POST.get("content")
+        if content:
+            Comment.objects.create(discussion=discussion, author=request.user, content=content)
+            return redirect("discussion_detail", discussion_id=discussion_id)
+
+    return render(request, "discussion_detail.html", {"discussion": discussion, "comments": comments})
