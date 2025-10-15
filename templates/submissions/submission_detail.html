@@ -14,6 +14,7 @@
     {% block content %}
     <div class="container mt-4 submission-detail">
 
+        <!-- Submission Info -->
         <h2 class="mb-3">Submission #{{ submission.id }}</h2>
 
         <div class="card mb-4">
@@ -21,18 +22,56 @@
                 <p><strong>Problem:</strong> {{ submission.problem.title }}</p>
                 <p><strong>Status:</strong> {{ submission.get_status_display }}</p>
                 <p><strong>Language:</strong> {{ submission.get_language_display }}</p>
+                <p><strong>Submitted on:</strong> {{ submission.created_at|date:"Y-m-d H:i:s" }}</p>
             </div>
         </div>
 
+        <!-- Code -->
         <div class="card mb-4">
             <div class="card-header">
-                Code
+                <strong>Submitted Code</strong>
             </div>
             <div class="card-body">
                 <pre class="submission-code"><code>{{ code_content|escape }}</code></pre>
             </div>
         </div>
 
+        <!-- Test Case Results -->
+        {% if results %}
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <strong>Testcase Results</strong>
+            </div>
+            <div class="card-body">
+                <table class="table table-bordered table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Input</th>
+                            <th>Expected Output</th>
+                            <th>Your Output</th>
+                            <th>Error Output</th>
+                            <th>Verdict</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in results %}
+                        <tr class="{% if r.verdict == 'AC' %}table-success{% elif r.verdict == 'WA' %}table-warning{% elif r.verdict == 'RE' %}table-danger{% elif r.verdict == 'TLE' %}table-secondary{% endif %}">
+                            <td>{{ forloop.counter }}</td>
+                            <td><pre>{{ r.input }}</pre></td>
+                            <td><pre>{{ r.expected }}</pre></td>
+                            <td><pre>{{ r.actual }}</pre></td>
+                            <td><pre>{{ r.stderr }}</pre></td>
+                            <td><strong>{{ r.verdict }}</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Navigation Buttons -->
         <div class="d-flex gap-2">
             <a href="{% url 'submission_list' %}" class="btn btn-secondary">Back to Submissions</a>
             <a href="{% url 'problem_detail' submission.problem.pk %}" class="btn btn-primary">Back to Problem</a>

@@ -12,6 +12,10 @@
 <body>
 {% include "nav.html" %}
 
+<script> window.MathJax = {tex: {inlineMath: [['\\(','\\)']],displayMath: [['$$','$$']]}, svg: { fontCache: 'global' }};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+
 <div class="form-container">
     <h2>{% if form.instance.pk %}Edit{% else %}Add New{% endif %} Problem</h2>
 

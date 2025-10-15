@@ -1,5 +1,4 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
 from django.contrib.auth import login, logout, get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
@@ -7,6 +6,7 @@ from django.utils import timezone
 from django.db.models import Count
 from .forms import UserSignupForm, UserLoginForm, ProblemForm, SubmissionForm, ContestForm, ExampleFormSet
 from .models import Problem, Submission, Contest, TestInput, TestOutput, Discussion, Comment, User
+from .utils import check_submission
 
 
 def signup_view(request):
@@ -53,17 +53,37 @@ def home_view(request):
 def profile_view(request):
     user = request.user
     recent_submissions = Submission.objects.filter(user=user).order_by('-created_at')[:5]  # last 5 submissions
-    problem_counts = Problem.objects.filter(submissions__user=user, submissions__status='AC') \
-        .values('difficulty') \
+
+    ac_problem_ids = (
+        Submission.objects
+        .filter(user=user, status='AC')
+        .values_list('problem', flat=True)
+        .distinct()
+    )
+
+    problem_counts = (
+        Problem.objects
+        .filter(problem_id__in=ac_problem_ids)
+        .values('difficulty')
         .annotate(count=Count('problem_id'))
+    )
 
     difficulty_stats = {'Easy': 0, 'Medium': 0, 'Hard': 0}
     for entry in problem_counts:
-        difficulty_stats[entry['difficulty']] = entry['count']
+        difficulty = entry.get('difficulty')
+        cnt = entry.get('count', 0)
+        if difficulty in difficulty_stats:
+            difficulty_stats[difficulty] = cnt
 
-    max_rating = 1847
     problems_solved = sum(difficulty_stats.values())
+    users = User.objects.order_by('-points')
+    user_rank = None
+    user_list = list(users.values_list('id', flat=True))
+    if user.id in user_list:
+        user_rank = user_list.index(user.id) + 1
+
     contests_count = 23
+    max_rating = 1000
 
     return render(request, "profile.html",{
         'recent_submissions': recent_submissions,
@@ -71,6 +91,7 @@ def profile_view(request):
         'problems_solved': problems_solved,
         'contests_count': contests_count,
         'max_rating': max_rating,
+        'user_rank': user_rank,
     })
 
 def problems_view(request):
@@ -99,21 +120,28 @@ def problem_crud(request, pk=None):
     else:
         problem = Problem(created_by=request.user)
 
-    example_form = ExampleFormSet(request.POST or None, instance=problem)
-
     if request.method == 'POST':
         form = ProblemForm(request.POST, instance=problem)
-        if form.is_valid() and example_form.is_valid():
+        formset = ExampleFormSet(request.POST, request.FILES, instance=problem)
+
+        if form.is_valid() and formset.is_valid():
             problem = form.save(commit=False)
             problem.created_by = request.user
             problem.save()
-            example_form.instance = problem
-            example_form.save()
+            formset.save()
+
+            for f in request.FILES.getlist('test_inputs'):
+                TestInput.objects.create(problem=problem, file=f)
+
+            for f in request.FILES.getlist('test_outputs'):
+                TestOutput.objects.create(problem=problem, file=f)
+
             return redirect('problems')
     else:
         form = ProblemForm(instance=problem)
+        formset = ExampleFormSet(instance=problem)
 
-    return render(request, 'problems/problem_crud.html', {'form': form, 'formset': example_form})
+    return render(request, 'problems/problem_crud.html', {'form': form, 'formset': formset})
 
 @login_required
 def problem_delete(request, pk):
@@ -143,10 +171,40 @@ def submit_solution(request, pk):
             submission.user = request.user
             submission.problem = problem
             submission.save()
-            messages.success(request, "Submission uploaded successfully!")
-            return redirect('submission_detail', pk=submission.pk)
+
+            results = check_submission(problem, submission.code_file.path, submission.language, problem.time_limit)
+
+            if any(r["verdict"] == "TLE" for r in results):
+                submission.status = "TLE"
+            elif any(r["verdict"] == "RE" for r in results):
+                submission.status = "RE"
+            elif any(r["verdict"] == "CE" for r in results):
+                submission.status = "Compilation Error"
+            elif any(r["verdict"] == "WA" for r in results):
+                submission.status = "WA"
+            else:
+                submission.status = "AC"
+            submission.save()
+
+            code_content = ""
+            if submission.code_file:
+                # submission.code_file.open('r')
+                # try:
+                #     code_content = submission.code_file.read()
+                #     if isinstance(code_content, bytes):
+                #         code_content = code_content.decode('utf-8', errors='replace')
+                # finally:
+                #     submission.code_file.close()
+                with open(submission.code_file.path, "r", encoding="utf-8", errors="replace") as f:
+                    code_content = f.read()
+
+            return render(request, 'submissions/submission_detail.html', {
+                'submission': submission,
+                'results': results,
+                'code_content': code_content
+            })
+
         else:
-            messages.error(request, "There was an error with your submission.")
             return render(request, 'problems/problem_detail.html', {
                 'problem': problem,
                 'submission_form': form,

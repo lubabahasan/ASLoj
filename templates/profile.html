@@ -16,48 +16,48 @@
         <!-- Profile Header -->
         <div class="card mb-4">
             <div class="profile-header">
-                <div class="row align-items-center">
+                <div class="row justify-content-right">
                     <div class="col-md-3 text-center">
                         {% if request.user.pfp %}
                             <img src="{{ request.user.pfp.url }}"
                                  alt="{{ request.user.full_name }}'s Avatar"
                                  class="profile-avatar rounded-circle"
-                                 style="width: 120px; height: 120px; object-fit: cover;">
+                                 style="width: 200px; height: 200px; object-fit: cover;">
                         {% else %}
-                            <img src="{% static 'images/default_pfp.png' %}"
+                            <img src="{% static 'pfp/default.jpeg' %}"
                                  alt="Default Avatar"
                                  class="profile-avatar rounded-circle"
-                                 style="width: 120px; height: 120px; object-fit: cover;">
+                                 style="width: 200px; height: 200px; object-fit: cover;">
                         {% endif %}
                     </div>
-                    <div class="col-md-9">
-                        <h2 class="mb-2">{{ request.user.full_name }}</h2>
-                        <h5 class="mb-3 opacity-75">{{ request.user.full_name }}</h5>
-                        <div class="d-flex flex-wrap gap-3 mb-3">
-<!--                            <span class="rating-badge rating-expert">-->
-<!--                                <i class="fas fa-star"></i> Expert • 1847-->
-<!--                            </span>-->
-                            <span class="badge bg-light text-dark">
-                                <i class="fas fa-map-marker-alt">Dhaka, Bangladesh</i>
-                            </span>
-                            <span class="badge bg-light text-dark">
-                                <i class="fas fa-university">University of Asia Pacific</i>
-                            </span>
+                    <div class="col-md-9 text-center">
+
+                      <h2 class="mb-2">{{ request.user.full_name }}</h2>
+                      <h6 class="mb-3 opacity-75">{{ request.user.email }}</h6>
+
+                      <div class="d-flex justify-content-center flex-wrap gap-3 mb-3">
+                        <span class="badge bg-light text-dark">
+                          <i class="fas fa-map-marker-alt"></i> Dhaka, Bangladesh
+                        </span>
+                        <span class="badge bg-light text-dark">
+                          <i class="fas fa-university"></i> University of Asia Pacific
+                        </span>
+                      </div>
+
+                      <div class="row text-center justify-content-center">
+                        <div class="col-4 col-md-3">
+                          <div class="h4 mb-0">{{ problems_solved }}</div>
+                          <small class="opacity-75">Problems Solved</small>
                         </div>
-                        <div class="row text-center">
-                            <div class="col-4">
-                                <div class="h4 mb-0">{{ problems_solved }}</div>
-                                <small class="opacity-75">Problems Solved</small>
-                            </div>
-                            <div class="col-4">
-                                <div class="h4 mb-0">23</div>
-                                <small class="opacity-75">Contests</small>
-                            </div>
-                            <div class="col-4">
-                                <div class="h4 mb-0">15</div>
-                                <small class="opacity-75">Global Rank</small>
-                            </div>
+                        <div class="col-4 col-md-3">
+                          <div class="h4 mb-0">{{ contests_count }}</div>
+                          <small class="opacity-75">Contests</small>
                         </div>
+                        <div class="col-4 col-md-3">
+                          <div class="h4 mb-0">{{ user_rank|default:"—" }}</div>
+                          <small class="opacity-75">Global Rank</small>
+                        </div>
+                      </div>
                     </div>
                 </div>
             </div>

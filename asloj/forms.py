@@ -1,9 +1,10 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm
-from django.forms import inlineformset_factory
-
-from .models import User, Problem, Example, Submission, Contest
+from django.core.validators import FileExtensionValidator
 from django.core.exceptions import ValidationError
+from django.forms import inlineformset_factory
+from .models import User, Problem, Example, Submission, Contest
+
 
 class UserSignupForm(forms.ModelForm):
     password = forms.CharField(widget=forms.PasswordInput())
@@ -59,6 +60,9 @@ ExampleFormSet = inlineformset_factory(
 )
 
 class SubmissionForm(forms.ModelForm):
+    code_file = forms.FileField(
+        validators=[FileExtensionValidator(allowed_extensions=['py', 'c', 'cpp', 'cc', 'cxx', 'java', 'js'])]
+    )
     class Meta:
         model = Submission
         fields = ['language', 'code_file']
