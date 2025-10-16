@@ -5,8 +5,9 @@ from django.core.paginator import Paginator
 from django.utils import timezone
 from django.db.models import Count
 from .forms import UserSignupForm, UserLoginForm, ProblemForm, SubmissionForm, ContestForm, ExampleFormSet
-from .models import Problem, Submission, Contest, TestInput, TestOutput, Discussion, Comment, User
+from .models import Problem, Submission, Contest, TestInput, TestOutput, Discussion, Comment, User, Group, GroupInvitation
 from .utils import check_submission
+from django.contrib import messages
 
 
 def signup_view(request):
@@ -83,7 +84,7 @@ def profile_view(request):
         user_rank = user_list.index(user.id) + 1
 
     contests_count = 23
-    max_rating = 1000
+    max_rating = user.points
 
     return render(request, "profile.html",{
         'recent_submissions': recent_submissions,
@@ -344,3 +345,111 @@ def discussion_detail(request, discussion_id):
             return redirect("discussion_detail", discussion_id=discussion_id)
 
     return render(request, "discussion_detail.html", {"discussion": discussion, "comments": comments})
+
+
+@login_required
+def group_list(request):
+    user_groups = request.user.user_groups.all()
+    invitations = GroupInvitation.objects.filter(invited_user=request.user, status='PENDING')
+    return render(request, 'groups/group_list.html', {
+        'user_groups': user_groups,
+        'invitations': invitations,
+    })
+
+
+@login_required
+def create_group(request):
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        if name:
+            group = Group.objects.create(name=name, created_by=request.user)
+            group.members.add(request.user)
+            messages.success(request, "Group created successfully!")
+            return redirect('group_list')
+    return render(request, 'groups/create_group.html')
+
+
+@login_required
+def group_detail(request, group_id):
+    group = get_object_or_404(Group, id=group_id)
+    members = group.members.all()
+    is_creator = group.created_by == request.user
+    return render(request, 'groups/group_detail.html', {
+        'group': group,
+        'members': members,
+        'is_creator': is_creator,
+    })
+
+
+@login_required
+def invite_member(request, group_id):
+    # Fetch the group
+    group = get_object_or_404(Group, id=group_id)
+
+    # Check if the user is a member
+    if request.user not in group.members.all():
+        messages.error(request, "You must be a member to invite others.")
+        return redirect('group_list')
+
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        invited_user = User.objects.filter(email=email).first()
+
+        if invited_user:
+            if invited_user in group.members.all():
+                messages.warning(request, f"{invited_user.full_name} is already a member.")
+            else:
+                GroupInvitation.objects.get_or_create(
+                    group=group,
+                    invited_user=invited_user,
+                    invited_by=request.user
+                )
+                messages.success(request, f"Invitation sent to {email}")
+        else:
+            messages.error(request, "No user found with that email.")
+
+        return redirect('group_detail', group_id=group.id)
+
+    return render(request, 'groups/invite_member.html', {'group': group})
+
+
+
+@login_required
+def respond_invitation(request, invitation_id, action):
+    invitation = get_object_or_404(GroupInvitation, id=invitation_id, invited_user=request.user)
+
+    if action == 'accept':
+        invitation.status = 'ACCEPTED'
+        invitation.group.members.add(request.user)
+        messages.success(request, f"You joined {invitation.group.name}")
+    elif action == 'decline':
+        invitation.status = 'DECLINED'
+        messages.info(request, "Invitation declined.")
+
+    invitation.save()
+    return redirect('group_list')
+
+
+@login_required
+def leave_group(request, group_id):
+    group = get_object_or_404(Group, id=group_id)
+    group.members.remove(request.user)
+    messages.info(request, f"You left {group.name}")
+    return redirect('group_list')
+
+
+@login_required
+def delete_group(request, group_id):
+    group = get_object_or_404(Group, id=group_id, created_by=request.user)
+    group.delete()
+    messages.success(request, "Group deleted successfully.")
+    return redirect('group_list')
+
+
+@login_required
+def remove_member(request, group_id, user_id):
+    group = get_object_or_404(Group, id=group_id, created_by=request.user)
+    user_to_remove = get_object_or_404(User, id=user_id)
+    group.members.remove(user_to_remove)
+    messages.info(request, f"{user_to_remove.full_name} removed from {group.name}")
+    return redirect('group_detail', group_id=group.id)

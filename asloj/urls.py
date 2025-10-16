@@ -15,6 +15,15 @@ urlpatterns = [
     path("community/", views.community_view, name="community"),
     path("discussion/<int:discussion_id>/", views.discussion_detail, name="discussion_detail"),
 
+    path('groups/', views.group_list, name='group_list'),
+    path('groups/create/', views.create_group, name='create_group'),
+    path('groups/<int:group_id>/', views.group_detail, name='group_detail'),
+    path('groups/<int:group_id>/invite/', views.invite_member, name='invite_member'),
+    path('groups/invitation/<int:invitation_id>/<str:action>/', views.respond_invitation, name='respond_invitation'),
+    path('groups/<int:group_id>/leave/', views.leave_group, name='leave_group'),
+    path('groups/<int:group_id>/delete/', views.delete_group, name='delete_group'),
+    path('groups/<int:group_id>/remove_member/<int:user_id>/', views.remove_member, name='remove_member'),
+
     path('problems/', views.problems_view, name='problems'),  # problem list
     path('problems/<int:pk>/', views.problem_detail, name='problem_detail'),
     path('problems/crud/', views.problem_crud, name='problem_crud'),  # add new
