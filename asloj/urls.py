@@ -36,10 +36,10 @@ urlpatterns = [
 
     path('contests/', views.contest_list, name='contest_list'),
     path('create/', views.contest_create, name='contest_create'),
-    path('contests/<int:pk>/', views.contest_detail, name='contest_detail'),
-    path('create/', views.contest_create, name='contest_create'),
-    path('<int:pk>/update/', views.contest_update, name='contest_update'),
-    path('<int:pk>/delete/', views.contest_delete, name='contest_delete'),
+    path('contests/<int:contest_id>/', views.contest_detail, name='contest_detail'),
+    path('contests/<int:contest_id>/', views.start_contest, name='start_contest'),
+    path('<int:contest_id>/update/', views.contest_update, name='contest_update'),
+    path('<int:contest_id>/delete/', views.contest_delete, name='contest_delete'),
 
     path('password-reset/', auth_views.PasswordResetView.as_view(
         form_class=CustomPasswordResetForm,

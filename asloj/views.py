@@ -247,9 +247,31 @@ def contest_list(request):
     return render(request, 'contests/contest_list.html', {'contests': contests})
 
 @login_required
-def contest_detail(request, pk):
-    contest = get_object_or_404(Contest, pk=pk)
-    return render(request, 'contests/contest_detail.html', {'contest': contest})
+def contest_detail(request, contest_id):
+    contest = get_object_or_404(Contest, id=contest_id)
+
+    context = {
+        'contest': contest
+    }
+    return render(request, 'contests/contest_detail.html', context)
+
+@login_required
+def start_contest(request, contest_id):
+    contest = get_object_or_404(Contest, id=contest_id)
+    now = timezone.now()
+
+    # Check contest start time
+    if now < contest.start_time:
+        messages.warning(request, "You need to wait until the contest starts!")
+        return redirect('contest_detail', contest_id=contest.id)
+
+    # Check contest end time
+    if now > contest.end_time:
+        messages.warning(request, "This contest has already ended.")
+        return redirect('contest_detail', contest_id=contest.id)
+
+    # All good, render start contest page
+    return render(request, 'contests/start_contest.html', {'contest': contest})
 
 @login_required
 def contest_create(request):
@@ -261,40 +283,34 @@ def contest_create(request):
         form = ContestForm(request.POST)
         if form.is_valid():
             contest = form.save(commit=False)
-            contest.creator = request.user  # ✅ Add creator properly
+            contest.creator = request.user
             contest.save()
             form.save_m2m()
             return redirect('contest_list')
     else:
-        form = ContestForm()  # ✅ Initialize for GET requests
+        form = ContestForm()
 
-        # ✅ Always return a context that includes 'form'
     return render(request, 'contests/contest_form.html', {'form': form})
 
 @login_required
-def contest_update(request, pk):
-    contest = get_object_or_404(Contest, pk=pk, creator=request.user)
+def contest_update(request, contest_id):
+    contest = get_object_or_404(Contest, pk=contest_id, creator=request.user)
     if request.method == 'POST':
         form = ContestForm(request.POST, instance=contest)
         if form.is_valid():
             form.save()
-            return redirect('contest_detail', pk=pk)
+            return redirect('contest_detail', contest_id=contest_id)
     else:
         form = ContestForm(instance=contest)
     return render(request, 'contests/create_contest.html', {'form': form})
 
 @login_required
-def contest_delete(request, pk):
-    contest = get_object_or_404(Contest, pk=pk, creator=request.user)
+def contest_delete(request, contest_id):
+    contest = get_object_or_404(Contest, pk=contest_id, creator=request.user)
     if request.method == 'POST':
         contest.delete()
         return redirect('contest_list')
-    return render(request, 'contests/contest_confirm_delete.html', {'contest': contest})
-
-def contest_detail(request, pk):
-    contest = get_object_or_404(Contest, pk=pk)
-    return render(request, 'contests/contest_detail.html', {'contest': contest})
-
+    return redirect('contest_list')
 
 User = get_user_model()
 def leaderboard_view(request):
