@@ -129,22 +129,6 @@ class Submission(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 
-class Contest(models.Model):
-    name = models.CharField(max_length=255)
-    description = models.TextField()
-    start_time = models.DateTimeField()
-    end_time = models.DateTimeField()
-    problems = models.ManyToManyField(Problem, blank=True, related_name='contests')
-    creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_contests')
-
-    def __str__(self):
-        return self.name
-
-    def is_active(self):
-        now = timezone.now()
-        return self.start_time <= now <= self.end_time
-
-
 class Discussion(models.Model):
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='discussions')
     title = models.CharField(max_length=255)
@@ -153,7 +137,6 @@ class Discussion(models.Model):
 
     def __str__(self):
         return self.title
-
 
 class Comment(models.Model):
     discussion = models.ForeignKey(Discussion, on_delete=models.CASCADE, related_name='comments')
@@ -164,6 +147,7 @@ class Comment(models.Model):
     def __str__(self):
         return f"Comment by {self.author.full_name}"
 
+
 class Group(models.Model):
     name = models.CharField(max_length=255)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='created_groups')
@@ -172,7 +156,6 @@ class Group(models.Model):
 
     def __str__(self):
         return self.name
-
 
 class GroupInvitation(models.Model):
     STATUS_CHOICES = [
@@ -188,3 +171,62 @@ class GroupInvitation(models.Model):
 
     def __str__(self):
         return f"{self.invited_user.email} invited to {self.group.name}"
+
+
+class Contest(models.Model):
+    name = models.CharField(max_length=255)
+    description = models.TextField()
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
+    problems = models.ManyToManyField(Problem, blank=True, related_name='contests')
+    creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_contests')
+
+    def __str__(self):
+        return self.name
+
+    def is_active(self):
+        now = timezone.now()
+        return self.start_time <= now <= self.end_time
+
+class ContestRegistration(models.Model):
+    contest = models.ForeignKey(Contest, on_delete=models.CASCADE, related_name='registrations')
+    name = models.CharField(max_length=100)
+    email = models.EmailField()
+    student_id = models.CharField(max_length=20)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    registered_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} - {self.contest.name}"
+
+class ContestSubmission(models.Model):
+    id = models.BigAutoField(primary_key=True)
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='contest_submissions')
+    contest = models.ForeignKey('Contest', on_delete=models.CASCADE, related_name='submissions')
+    problem = models.ForeignKey('Problem', on_delete=models.CASCADE, related_name='contest_submissions')
+    code_file = models.FileField(upload_to="contest_submissions/")
+
+    LANGUAGE_CHOICES = [
+        ("py", "Python"),
+        ("c", "C"),
+        ("cpp", "C++"),
+        ("java", "Java"),
+        ("js", "JavaScript"),
+    ]
+
+    STATUS_CHOICES = [
+        ("P", "Pending"),
+        ("AC", "Accepted"),
+        ("WA", "Wrong Answer"),
+        ("RE", "Runtime Error"),
+        ("TLE", "Time Limit Exceeded"),
+    ]
+
+    language = models.CharField(max_length=10, choices=LANGUAGE_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="P")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.problem.title} ({self.status})"

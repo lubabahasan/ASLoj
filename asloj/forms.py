@@ -3,7 +3,7 @@ from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm
 from django.core.validators import FileExtensionValidator
 from django.core.exceptions import ValidationError
 from django.forms import inlineformset_factory
-from .models import User, Problem, Example, Submission, Contest
+from .models import User, Problem, Example, Submission, Contest, ContestRegistration, ContestSubmission
 
 
 class UserSignupForm(forms.ModelForm):
@@ -22,6 +22,7 @@ class UserSignupForm(forms.ModelForm):
             raise forms.ValidationError("This email is already registered")
         return email
 
+
 class UserLoginForm(AuthenticationForm):
     username = forms.EmailField(widget=forms.EmailInput())
     password = forms.CharField(widget=forms.PasswordInput())
@@ -31,7 +32,8 @@ class UserLoginForm(AuthenticationForm):
         if not username.endswith("@uap-bd.edu"):
             raise forms.ValidationError("Invalid email address")
         return username
-    
+
+
 class CustomPasswordResetForm(PasswordResetForm):
     email = forms.EmailField(label="Email", max_length=254)
 
@@ -41,11 +43,12 @@ class CustomPasswordResetForm(PasswordResetForm):
             raise forms.ValidationError("Invalid email address")
         return email
 
-class ProblemForm(forms.ModelForm):
 
+class ProblemForm(forms.ModelForm):
     class Meta:
         model = Problem
         fields = ['title', 'difficulty', 'time_limit', 'statement', 'input_specification', 'output_specification']
+
 
 ExampleFormSet = inlineformset_factory(
     Problem, Example,
@@ -59,13 +62,16 @@ ExampleFormSet = inlineformset_factory(
     }
 )
 
+
 class SubmissionForm(forms.ModelForm):
     code_file = forms.FileField(
         validators=[FileExtensionValidator(allowed_extensions=['py', 'c', 'cpp', 'cc', 'cxx', 'java', 'js'])]
     )
+
     class Meta:
         model = Submission
         fields = ['language', 'code_file']
+
 
 class ContestForm(forms.ModelForm):
     class Meta:
@@ -88,3 +94,17 @@ class ContestForm(forms.ModelForm):
             raise ValidationError("End time must be after start time.")
 
         return cleaned_data
+
+
+class ContestRegistrationForm(forms.ModelForm):
+    class Meta:
+        model = ContestRegistration
+        fields = ['name', 'email', 'student_id']
+
+class ContestSubmissionForm(forms.ModelForm):
+    class Meta:
+        model = ContestSubmission
+        fields = ['language', 'code_file']
+        widgets = {
+            'code': forms.Textarea(attrs={'class': 'form-control', 'rows': 15}),
+        }

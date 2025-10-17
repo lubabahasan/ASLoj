@@ -24,11 +24,15 @@
             <form action="{% url 'contest_delete' form.instance.pk %}" method="POST" class="d-inline"
                   onsubmit="return confirm('Are you sure you want to delete this contest?');">
                 {% csrf_token %}
+
             </form>
+
+            <!-- Optional Edit button (redirect to same page, for clarity) -->
+
         {% endif %}
     </form>
 </div>
-
+{% include "footer.html" %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

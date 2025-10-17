@@ -1,5 +1,6 @@
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
+from django.shortcuts import render
 from django.urls import path, reverse_lazy
 from mysite import settings
 from .forms import CustomPasswordResetForm
@@ -37,9 +38,22 @@ urlpatterns = [
     path('contests/', views.contest_list, name='contest_list'),
     path('create/', views.contest_create, name='contest_create'),
     path('contests/<int:contest_id>/', views.contest_detail, name='contest_detail'),
+    path('contests/<int:contest_id>/register/', views.contest_register, name='contest_register'),
+    path('contests/<int:contest_id>/registered/', views.contest_registered, name='contest_registered'),
+
+    path('contests/<int:contest_id>/problems/', views.contest_problems, name='contest_problems'),
+    path('contests/<int:contest_id>/problems/<int:problem_id>/', views.contest_problem_detail, name='contest_problem_detail'),
+    path('contests/<int:contest_id>/problems/<int:problem_id>/submit/', views.submit_contest_solution, name='submit_contest_solution'),
+
     path('contests/<int:contest_id>/', views.start_contest, name='start_contest'),
     path('<int:contest_id>/update/', views.contest_update, name='contest_update'),
     path('<int:contest_id>/delete/', views.contest_delete, name='contest_delete'),
+    path('contests/<int:contest_id>/submissions/', views.contest_submission_list, name='contest_submission_list'),
+    path('contests/<int:contest_id>/submissions/<int:submission_id>/', views.contest_submission_detail, name='contest_submission_detail'),
+
+    # path('contests/submission/<int:pk>/', views.contest_submission_detail, name='contest_submission_detail'),
+
+    path('about/', lambda request: render(request, 'about_developers.html'), name='about_developers'),
 
     path('password-reset/', auth_views.PasswordResetView.as_view(
         form_class=CustomPasswordResetForm,
