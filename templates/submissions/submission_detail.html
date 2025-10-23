@@ -20,7 +20,20 @@
         <div class="card mb-4">
             <div class="card-body">
                 <p><strong>Problem:</strong> {{ submission.problem.title }}</p>
-                <p><strong>Status:</strong> {{ submission.get_status_display }}</p>
+                <p>
+                    <strong>Status:</strong>
+                    {% if submission.status == "AC" %}
+                        <span class="badge bg-success">Accepted</span>
+                    {% elif submission.status == "WA" %}
+                        <span class="badge bg-danger text-dark">Wrong Answer</span>
+                    {% elif submission.status == "RE" %}
+                        <span class="badge bg-warning">Runtime Error</span>
+                    {% elif submission.status == "TLE" %}
+                        <span class="badge bg-secondary">Time Limit Exceeded</span>
+                    {% else %}
+                        <span class="badge bg-info text-dark">Pending</span>
+                    {% endif %}
+                </p>
                 <p><strong>Language:</strong> {{ submission.get_language_display }}</p>
                 <p><strong>Submitted on:</strong> {{ submission.created_at|date:"Y-m-d H:i:s" }}</p>
             </div>

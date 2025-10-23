@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, Problem, TestInput, TestOutput, Example, Submission, Contest
+from .models import User, Problem, TestInput, TestOutput, Example, Submission, Contest, Discussion, Comment, Group, GroupInvitation, ContestRegistration, ContestSubmission
 
 
 class UserAdmin(BaseUserAdmin):
@@ -36,5 +36,11 @@ admin.site.register(TestInput)
 admin.site.register(TestOutput)
 admin.site.register(Example)
 admin.site.register(Submission)
+admin.site.register(Discussion)
+admin.site.register(Comment)
+admin.site.register(Group)
+admin.site.register(GroupInvitation)
 admin.site.register(Contest)
+admin.site.register(ContestRegistration)
+admin.site.register(ContestSubmission)
 

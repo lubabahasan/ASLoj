@@ -13,6 +13,7 @@ urlpatterns = [
     path("home/", views.home_view, name="home"),
     path("profile/", views.profile_view, name="profile"),
     path("profile/<str:university_id>/", views.user_profile_view, name="user_profile"),
+    path('edit-profile/', views.edit_profile, name='edit_profile'),
     path('leaderboard/', views.leaderboard_view, name='leaderboard'),
     path("community/", views.community_view, name="community"),
     path("discussion/<int:discussion_id>/", views.discussion_detail, name="discussion_detail"),

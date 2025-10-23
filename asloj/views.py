@@ -3,12 +3,13 @@ from django.contrib.auth import login, logout, get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
+from django.conf import settings
 from django.utils import timezone
 from django.db.models import Count, Sum, Max
 from datetime import timedelta
-from .forms import UserSignupForm, UserLoginForm, ProblemForm, SubmissionForm, ContestForm, ExampleFormSet, ContestSubmissionForm
+from .forms import UserSignupForm, UserLoginForm, ProblemForm, SubmissionForm, ContestForm, ExampleFormSet, ContestSubmissionForm, EditProfileForm
 from .models import Problem, Submission, Contest, TestInput, TestOutput, Discussion, ContestSubmission, Comment, User, Group, GroupInvitation, ContestRegistration
-from .utils import check_submission, judge_contest_submission, update_points
+from .utils import check_submission, judge_contest_submission, update_points, generate_heatmap_data
 
 
 def signup_view(request):
@@ -96,8 +97,10 @@ def profile_view(request, university_id):
     # Total points
     total_points = profile_user.points
 
+    heatmap_data = generate_heatmap_data(profile_user)
 
     context = {
+        'heatmap_data' : heatmap_data,
         'profile_user': profile_user,
         'recent_submissions': recent_submissions,
         'difficulty_stats': difficulty_stats,
@@ -159,8 +162,10 @@ def user_profile_view(request, university_id):
     # --- Member Since ---
     member_since = getattr(user, 'date_joined', None)
 
+    heatmap_data = generate_heatmap_data(user)
 
     context = {
+        'heatmap_data': heatmap_data,
         'profile_user': user,
         'recent_submissions': recent_submissions,
         'difficulty_stats': difficulty_stats,
@@ -213,6 +218,22 @@ def user_profile_view(request, university_id):
 #         'user_rank': user_rank,
 #     })
 
+@login_required
+def edit_profile(request):
+    user = request.user
+
+    if request.method == 'POST':
+        form = EditProfileForm(request.POST, request.FILES, instance=user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Your profile has been updated successfully!')
+            return redirect('user_profile', university_id=request.user.university_id)
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = EditProfileForm(instance=user)
+
+    return render(request, 'edit_profile.html', {'form': form})
 
 def problems_view(request):
     problems = Problem.objects.all().order_by('difficulty')

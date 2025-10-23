@@ -14,13 +14,23 @@
 
    <div class="container mt-4 fade-in">
         <!-- Profile Header -->
-        <div class="card mb-4">
+        <div class="card mb-4 position-relative">
             <div class="profile-header">
+                <!-- Edit Button (top-right) -->
+                {% if request.user.id == profile_user.id %}
+                    <a href="{% url 'edit_profile' %}"
+                       class="btn btn-light btn-sm border position-absolute"
+                       style="top: 10px; right: 10px;">
+                        <i class="fas fa-edit"></i> Edit Profile
+                    </a>
+                {% endif %}
+
+
                 <div class="row justify-content-right">
                     <div class="col-md-3 text-center">
-                        {% if request.user.pfp %}
-                            <img src="{{ request.user.pfp.url }}"
-                                 alt="{{ request.user.full_name }}'s Avatar"
+                        {% if profile_user.pfp %}
+                            <img src="{{ profile_user.pfp.url }}"
+                                 alt="{{ profile_user.full_name }}'s Avatar"
                                  class="profile-avatar rounded-circle"
                                  style="width: 200px; height: 200px; object-fit: cover;">
                         {% else %}
@@ -30,34 +40,34 @@
                                  style="width: 200px; height: 200px; object-fit: cover;">
                         {% endif %}
                     </div>
+
                     <div class="col-md-9 text-center">
+                        <h2 class="mb-2">{{ profile_user.full_name }}</h2>
+                        <h6 class="mb-3 opacity-75">{{ profile_user.email }}</h6>
 
-                      <h2 class="mb-2">{{ request.user.full_name }}</h2>
-                      <h6 class="mb-3 opacity-75">{{ request.user.email }}</h6>
+                        <div class="d-flex justify-content-center flex-wrap gap-3 mb-3">
+                            <span class="badge bg-light text-dark">
+                                <i class="fas fa-map-marker-alt"></i> Dhaka, Bangladesh
+                            </span>
+                            <span class="badge bg-light text-dark">
+                                <i class="fas fa-university"></i> University of Asia Pacific
+                            </span>
+                        </div>
 
-                      <div class="d-flex justify-content-center flex-wrap gap-3 mb-3">
-                        <span class="badge bg-light text-dark">
-                          <i class="fas fa-map-marker-alt"></i> Dhaka, Bangladesh
-                        </span>
-                        <span class="badge bg-light text-dark">
-                          <i class="fas fa-university"></i> University of Asia Pacific
-                        </span>
-                      </div>
-
-                      <div class="row text-center justify-content-center">
-                        <div class="col-4 col-md-3">
-                          <div class="h4 mb-0">{{ problems_solved }}</div>
-                          <small class="opacity-75">Problems Solved</small>
+                        <div class="row text-center justify-content-center">
+                            <div class="col-4 col-md-3">
+                                <div class="h4 mb-0">{{ problems_solved }}</div>
+                                <small class="opacity-75">Problems Solved</small>
+                            </div>
+                            <div class="col-4 col-md-3">
+                                <div class="h4 mb-0">{{ contests_count }}</div>
+                                <small class="opacity-75">Contests</small>
+                            </div>
+                            <div class="col-4 col-md-3">
+                                <div class="h4 mb-0">{{ user_rank|default:"—" }}</div>
+                                <small class="opacity-75">Global Rank</small>
+                            </div>
                         </div>
-                        <div class="col-4 col-md-3">
-                          <div class="h4 mb-0">{{ contests_count }}</div>
-                          <small class="opacity-75">Contests</small>
-                        </div>
-                        <div class="col-4 col-md-3">
-                          <div class="h4 mb-0">{{ user_rank|default:"—" }}</div>
-                          <small class="opacity-75">Global Rank</small>
-                        </div>
-                      </div>
                     </div>
                 </div>
             </div>
@@ -163,14 +173,60 @@
 
                 <!-- Problem Solving Progress -->
                 <div class="card mb-4">
-                    <div class="card-header bg-white">
-                        <h5 class="mb-0"><i class="fas fa-chart-line"></i> Problem Solving Progress</h5>
-                    </div>
-                    <div class="card-body">
-<!--                        heatmap or calender wise problem solves goes here -->
-                    </div>
+                  <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-line"></i> Problem Solving Progress</h5>
+                  </div>
+                  <div class="card-body">
+                    <div id="heatmap" class="heatmap-grid"></div>
+                  </div>
                 </div>
+
+                <script>
+                  const heatmapData = JSON.parse('{{ heatmap_data|safe|escapejs }}');
+                  const container = document.getElementById("heatmap");
+
+                  if (container && Array.isArray(heatmapData)) {
+                    const colors = ["#ebedf0", "#c6e48b", "#7bc96f", "#239a3b", "#196127"];
+
+                    heatmapData.forEach(entry => {
+                      const intensity = entry.count === 0 ? 0 :
+                        entry.count < 2 ? 1 :
+                        entry.count < 4 ? 2 :
+                        entry.count < 6 ? 3 : 4;
+
+                      const day = document.createElement("div");
+                      day.classList.add("heatmap-cell");
+                      day.style.backgroundColor = colors[intensity];
+                      day.title = `${entry.date}: ${entry.count} solved`;
+                      container.appendChild(day);
+                    });
+                  }
+                </script>
+
+                <style>
+                  .heatmap-grid {
+                    display: grid;
+                    grid-template-columns: repeat(53, 12px);
+                    grid-template-rows: repeat(7, 12px);
+                    gap: 3px;
+                    justify-content: center;
+                    align-items: center;
+                  }
+                  .heatmap-cell {
+                    width: 12px;
+                    height: 12px;
+                    border-radius: 2px;
+                    transition: transform 0.1s;
+                  }
+                  .heatmap-cell:hover {
+                    transform: scale(1.4);
+                  }
+                </style>
+
+
             </div>
+
+
 
             <!-- Right Column -->
             <div class="col-lg-4">
@@ -182,23 +238,58 @@
                         </h5>
                     </div>
                     <div class="card-body">
-                        <div class="achievement-badge">
-                            <i class="fas fa-fire"></i> 50 Day Streak
-                        </div>
-                        <div class="achievement-badge">
-                            <i class="fas fa-bolt"></i> Speed Demon
-                        </div>
-                        <div class="achievement-badge">
-                            <i class="fas fa-brain"></i> Problem Solver
-                        </div>
-                        <div class="achievement-badge">
-                            <i class="fas fa-trophy"></i> Contest Winner
-                        </div>
-                        <div class="achievement-badge">
-                            <i class="fas fa-star"></i> Rising Star
-                        </div>
+                        {% comment %} Dynamic Achievements based on stats {% endcomment %}
+
+                        {% if streak_days >= 50 %}
+                            <div class="achievement-badge">
+                                <i class="fas fa-fire"></i> 50 Day Streak
+                            </div>
+                        {% elif streak_days >= 20 %}
+                            <div class="achievement-badge">
+                                <i class="fas fa-fire"></i> 20 Day Streak
+                            </div>
+                        {% endif %}
+
+                        {% if problems_solved >= 500 %}
+                            <div class="achievement-badge">
+                                <i class="fas fa-brain"></i> Master Solver
+                            </div>
+                        {% elif problems_solved >= 100 %}
+                            <div class="achievement-badge">
+                                <i class="fas fa-brain"></i> Problem Solver
+                            </div>
+                        {% elif problems_solved >= 5 %}
+                            <div class="achievement-badge">
+                                <i class="fas fa-brain"></i> Rising Solver
+                            </div>
+                        {% elif problems_solved >= 1 %}
+                            <div class="achievement-badge">
+                                <i class="fas fa-brain"></i> Newbie
+                            </div>
+                        {% endif %}
+
+                        {% if total_points >= 5000 %}
+                            <div class="achievement-badge">
+                                <i class="fas fa-trophy"></i> Top Scorer
+                            </div>
+                        {% elif total_points >= 1000 %}
+                            <div class="achievement-badge">
+                                <i class="fas fa-star"></i> Rising Star
+                            </div>
+                        {% endif %}
+
+                        {% if contests_count >= 20 %}
+                            <div class="achievement-badge">
+                                <i class="fas fa-bolt"></i> Contest Veteran
+                            </div>
+                        {% elif contests_count >= 5 %}
+                            <div class="achievement-badge">
+                                <i class="fas fa-bolt"></i> Active Participant
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
+
 
                 <!-- Contest History -->
                 <div class="card mb-4">
@@ -208,44 +299,35 @@
                         </h5>
                     </div>
                     <div class="card-body contest-history">
-                        <div class="contest-item">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <strong>Codeforces Round #789</strong>
-                                    <div class="text-muted small">Div. 2</div>
-                                </div>
-                                <div class="text-end">
-                                    <div class="contest-rating-up">1847 <i class="fas fa-arrow-up"></i> +42</div>
-                                    <div class="text-muted small">Rank: 156</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="contest-item">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <strong>Educational Round #127</strong>
-                                    <div class="text-muted small">Div. 2</div>
-                                </div>
-                                <div class="text-end">
-                                    <div class="contest-rating-down">1805 <i class="fas fa-arrow-down"></i> -28</div>
-                                    <div class="text-muted small">Rank: 892</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="contest-item">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <strong>Codeforces Round #788</strong>
-                                    <div class="text-muted small">Div. 1 + Div. 2</div>
-                                </div>
-                                <div class="text-end">
-                                    <div class="contest-rating-up">1833 <i class="fas fa-arrow-up"></i> +67</div>
-                                    <div class="text-muted small">Rank: 89</div>
+                        {% for contest in contests %}
+                            <div class="contest-item">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <strong>{{ contest.contest__name }}</strong>
+                                        {% if contest.contest__division %}
+                                            <div class="text-muted small">{{ contest.contest__division }}</div>
+                                        {% endif %}
+                                        <div class="text-muted small">{{ contest.contest__start_time|date:"Y-m-d" }}</div>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="{% if contest.rating_change > 0 %}contest-rating-up{% elif contest.rating_change < 0 %}contest-rating-down{% else %}contest-rating-neutral{% endif %}">
+                                            {{ contest.new_rating }}
+                                            {% if contest.rating_change > 0 %}
+                                                <i class="fas fa-arrow-up"></i> +{{ contest.rating_change }}
+                                            {% elif contest.rating_change < 0 %}
+                                                <i class="fas fa-arrow-down"></i> {{ contest.rating_change }}
+                                            {% endif %}
+                                        </div>
+                                        <div class="text-muted small">Points: {{ contest.total_points }}</div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        {% empty %}
+                            <p>No contest history yet.</p>
+                        {% endfor %}
                     </div>
                 </div>
+
 
                 <!-- Quick Stats -->
                 <div class="card">
@@ -257,22 +339,27 @@
                     <div class="card-body">
                         <ul class="list-group list-group-flush">
                             <li class="list-group-item d-flex justify-content-between">
-                                <span><i class="fas fa-calendar-alt text-primary"></i> Member Since</span>
-                                <strong>Jan 2022</strong>
+                                <span>Contests Registered</span>
+                                <strong>{{ contests_count }}</strong>
                             </li>
                             <li class="list-group-item d-flex justify-content-between">
-                                <span><i class="fas fa-clock text-success"></i> Last Activity</span>
-                                <strong>2 hours ago</strong>
+                                <span>Max Points in a Contest</span>
+                                <strong>{{ max_rating }}</strong>
                             </li>
                             <li class="list-group-item d-flex justify-content-between">
-                                <span><i class="fas fa-fire text-warning"></i> Current Streak</span>
-                                <strong>15 days</strong>
+                                <span>Total Points</span>
+                                <strong>{{ total_points }}</strong>
                             </li>
                             <li class="list-group-item d-flex justify-content-between">
-                                <span><i class="fas fa-chart-bar text-info"></i> Contribution</span>
-                                <strong>+127</strong>
+                                <span>Last Activity</span>
+                                <strong>{% if last_activity %}{{ last_activity.created_at|timesince }} ago{% else %}—{% endif %}</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>Current Streak</span>
+                                <strong>{{ streak_days }} days</strong>
                             </li>
                         </ul>
+
                     </div>
                 </div>
             </div>

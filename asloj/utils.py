@@ -362,3 +362,38 @@ def update_points(user, contest):
     user.save()
 
 
+# utils.py
+from datetime import timedelta
+from django.utils import timezone
+from collections import defaultdict
+from .models import Submission
+
+
+def generate_heatmap_data(user):
+    """Generate daily AC submission counts for the past year."""
+    today = timezone.now().date()
+    start_date = today - timedelta(days=365)
+
+    # Fetch accepted submissions in the past year
+    submissions = (
+        Submission.objects.filter(user=user, status='AC', created_at__date__gte=start_date)
+        .values_list('created_at', flat=True)
+    )
+
+    # Count number of submissions per day
+    daily_counts = defaultdict(int)
+    for sub_date in submissions:
+        day = sub_date.date()
+        daily_counts[day] += 1
+
+    # Prepare ordered list (for each day)
+    heatmap_data = []
+    for i in range(366):
+        day = start_date + timedelta(days=i)
+        count = daily_counts.get(day, 0)
+        heatmap_data.append({
+            'date': day.isoformat(),
+            'count': count,
+        })
+
+    return heatmap_data

@@ -23,6 +23,17 @@
         {% csrf_token %}
         {{ form.as_p }}
 
+        <h6 style="color:red"><strong>Input and Output File Uploading Instructions</strong></h6>
+        <p>
+            1. <strong>Create sample test cases</strong> and save them in separate files, naming them as
+            <em>test_input_1.txt</em>, <em>test_input_2.txt</em>, ... and similarly
+            <em>test_output_1.txt</em>, <em>test_output_2.txt</em>, ...
+        </p>
+        <p>
+            2. <strong>Upload</strong> the <em>test_input</em> and <em>test_output</em> files in their respective fields.
+        </p>
+
+
         <h4>Test Inputs</h4>
         <input type="file" name="test_inputs" multiple class="form-control mb-3">
 

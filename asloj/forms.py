@@ -22,7 +22,6 @@ class UserSignupForm(forms.ModelForm):
             raise forms.ValidationError("This email is already registered")
         return email
 
-
 class UserLoginForm(AuthenticationForm):
     username = forms.EmailField(widget=forms.EmailInput())
     password = forms.CharField(widget=forms.PasswordInput())
@@ -32,6 +31,20 @@ class UserLoginForm(AuthenticationForm):
         if not username.endswith("@uap-bd.edu"):
             raise forms.ValidationError("Invalid email address")
         return username
+
+class EditProfileForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['full_name', 'pfp']
+        widgets = {
+            'full_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter your full name',
+            }),
+            'pfp': forms.FileInput(attrs={
+                'class': 'form-control',
+            }),
+        }
 
 
 class CustomPasswordResetForm(PasswordResetForm):
@@ -43,12 +56,10 @@ class CustomPasswordResetForm(PasswordResetForm):
             raise forms.ValidationError("Invalid email address")
         return email
 
-
 class ProblemForm(forms.ModelForm):
     class Meta:
         model = Problem
         fields = ['title', 'difficulty', 'time_limit', 'statement', 'input_specification', 'output_specification']
-
 
 ExampleFormSet = inlineformset_factory(
     Problem, Example,
@@ -61,7 +72,6 @@ ExampleFormSet = inlineformset_factory(
         'note': forms.Textarea(attrs={'rows': 6, 'class': 'form-control'}),
     }
 )
-
 
 class SubmissionForm(forms.ModelForm):
     code_file = forms.FileField(
@@ -94,7 +104,6 @@ class ContestForm(forms.ModelForm):
             raise ValidationError("End time must be after start time.")
 
         return cleaned_data
-
 
 class ContestRegistrationForm(forms.ModelForm):
     class Meta:
