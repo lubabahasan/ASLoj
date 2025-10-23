@@ -85,9 +85,16 @@ class TestInput(models.Model):
     problem = models.ForeignKey('Problem', on_delete=models.CASCADE, related_name='test_inputs')
     file = models.FileField(upload_to=test_input_upload_to)
 
+    def __str__(self):
+        return f"{self.problem.title} - {self.file.name}"
+
+
 class TestOutput(models.Model):
     problem = models.ForeignKey('Problem', on_delete=models.CASCADE, related_name='test_outputs')
     file = models.FileField(upload_to=test_output_upload_to)
+
+    def __str__(self):
+        return f"{self.problem.title} - {self.file.name}"
 
 
 class Example(models.Model):
@@ -188,6 +195,23 @@ class Contest(models.Model):
         now = timezone.now()
         return self.start_time <= now <= self.end_time
 
+    def user_points(self, user):
+        """
+        Calculate total points for a user in this contest.
+        Only the best submission per problem counts.
+        """
+        total_points = 0
+        problems = self.problems.all()
+        for problem in problems:
+            best_submission = self.submissions.filter(
+                user=user,
+                problem=problem,
+                status="AC"  # optional: only count accepted submissions
+            ).order_by('-points').first()
+            if best_submission:
+                total_points += best_submission.points
+        return total_points
+
 class ContestRegistration(models.Model):
     contest = models.ForeignKey(Contest, on_delete=models.CASCADE, related_name='registrations')
     name = models.CharField(max_length=100)
@@ -201,6 +225,8 @@ class ContestRegistration(models.Model):
 
 class ContestSubmission(models.Model):
     id = models.BigAutoField(primary_key=True)
+
+    points = models.IntegerField(default=0)
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='contest_submissions')
     contest = models.ForeignKey('Contest', on_delete=models.CASCADE, related_name='submissions')
@@ -229,4 +255,4 @@ class ContestSubmission(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.user.username} - {self.problem.title} ({self.status})"
+        return f"{self.problem.title} ({self.status})"

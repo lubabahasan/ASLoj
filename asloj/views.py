@@ -4,14 +4,11 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.utils import timezone
-from django.db.models import Count
+from django.db.models import Count, Sum, Max
+from datetime import timedelta
 from .forms import UserSignupForm, UserLoginForm, ProblemForm, SubmissionForm, ContestForm, ExampleFormSet, ContestSubmissionForm
-import os
-from django.conf import settings
-from .models import Problem, Submission, Contest, TestInput, TestOutput, Discussion, ContestSubmission, Comment, User, Group, \
-    GroupInvitation, ContestRegistration
-from .utils import check_submission
-from time import localtime
+from .models import Problem, Submission, Contest, TestInput, TestOutput, Discussion, ContestSubmission, Comment, User, Group, GroupInvitation, ContestRegistration
+from .utils import check_submission, judge_contest_submission, update_points
 
 
 def signup_view(request):
@@ -38,10 +35,14 @@ def login_view(request):
         form = UserLoginForm()
     return render(request, "login.html", {"form": form})
 
+def logout_view(request):
+    logout(request)
+    return redirect("login")
+
 @login_required
 def home_view(request):
     # Top 5 users (by points)
-    top_users = User.objects.order_by('-points')[:8]
+    top_users = User.objects.filter(is_staff=False).order_by('-points')[:8]
 
     # Active contests (currently running)
     now = timezone.now()
@@ -55,52 +56,166 @@ def home_view(request):
     }
     return render(request, "home.html", context)
 
-def profile_view(request):
-    user = request.user
-    recent_submissions = Submission.objects.filter(user=user).order_by('-created_at')[:5]  # last 5 submissions
+User = get_user_model()
+def profile_view(request, university_id):
+    profile_user = get_object_or_404(User, university_id=university_id)
 
-    ac_problem_ids = (
-        Submission.objects
-        .filter(user=user, status='AC')
-        .values_list('problem', flat=True)
-        .distinct()
-    )
-
-    problem_counts = (
-        Problem.objects
-        .filter(problem_id__in=ac_problem_ids)
-        .values('difficulty')
-        .annotate(count=Count('problem_id'))
-    )
-
-    difficulty_stats = {'Easy': 0, 'Medium': 0, 'Hard': 0}
-    for entry in problem_counts:
-        difficulty = entry.get('difficulty')
-        cnt = entry.get('count', 0)
-        if difficulty in difficulty_stats:
-            difficulty_stats[difficulty] = cnt
-
-    problems_solved = sum(difficulty_stats.values())
-    users = User.objects.order_by('-points')
+    leaderboard = User.objects.filter(is_active=True).order_by('-points')
     user_rank = None
-    user_list = list(users.values_list('id', flat=True))
-    if user.id in user_list:
-        user_rank = user_list.index(user.id) + 1
+    for idx, u in enumerate(leaderboard, start=1):
+        if u.id == profile_user.id:
+            user_rank = idx
+            break
 
-    contests_count = 2
-    max_rating = user.points
+    recent_submissions = profile_user.submissions.order_by('-created_at')[:10]
 
-    return render(request, "profile.html",{
+    difficulty_stats = {
+        'Easy': profile_user.submissions.filter(status='AC', problem__difficulty='Easy').count(),
+        'Medium': profile_user.submissions.filter(status='AC', problem__difficulty='Medium').count(),
+        'Hard': profile_user.submissions.filter(status='AC', problem__difficulty='Hard').count()
+    }
+
+    problems_solved = profile_user.submissions.filter(status='AC').values('problem').distinct().count()
+
+    contest_history = ContestRegistration.objects.filter(user=profile_user).select_related('contest').order_by('-registered_at')
+    contests_count = contest_history.count()
+
+    member_since = profile_user.date_joined.date() if hasattr(profile_user, 'date_joined') else None
+
+    last_submission = profile_user.submissions.order_by('-created_at').first()
+
+    today = timezone.now().date()
+    dates = profile_user.submissions.filter(status='AC').dates('created_at', 'day', order='DESC')
+    streak_days = 0
+    for d in dates:
+        if d == today - timedelta(days=streak_days):
+            streak_days += 1
+        else:
+            break
+
+    # Total points
+    total_points = profile_user.points
+
+
+    context = {
+        'profile_user': profile_user,
         'recent_submissions': recent_submissions,
         'difficulty_stats': difficulty_stats,
         'problems_solved': problems_solved,
         'contests_count': contests_count,
-        'max_rating': max_rating,
+        'contest_history': contest_history,
         'user_rank': user_rank,
-    })
+        'max_rating': total_points,
+        'member_since': member_since,
+        'last_submission': last_submission,
+        'streak_days': streak_days,
+    }
+
+    return render(request, 'profile.html', context)
+
+def user_profile_view(request, university_id):
+    user = get_object_or_404(User, university_id=university_id)
+
+    # --- Global Rank ---
+    all_users = User.objects.filter(is_active=True).order_by('-points')
+    user_list = list(all_users.values_list('id', flat=True))
+    user_rank = user_list.index(user.id) + 1 if user.id in user_list else None
+
+    # --- Recent Submissions ---
+    recent_submissions = Submission.objects.filter(user=user).order_by('-created_at')[:5]
+
+    # --- Problem Difficulty Stats ---
+    ac_problem_ids = Submission.objects.filter(user=user, status='AC').values_list('problem', flat=True).distinct()
+    problem_counts = Problem.objects.filter(problem_id__in=ac_problem_ids)\
+        .values('difficulty')\
+        .annotate(count=Count('problem_id'))
+    difficulty_stats = {'Easy': 0, 'Medium': 0, 'Hard': 0}
+    for entry in problem_counts:
+        difficulty_stats[entry['difficulty']] = entry['count']
+    problems_solved = sum(difficulty_stats.values())
+
+    # --- Contest History ---
+    contest_subs = ContestSubmission.objects.filter(user=user)
+    contests = contest_subs.values('contest__id', 'contest__name', 'contest__start_time')\
+        .annotate(total_points=Sum('points'))\
+        .order_by('-contest__start_time')
+
+    # --- Quick Stats ---
+    contests_count = ContestRegistration.objects.filter(user=user).count()
+    max_points = contest_subs.aggregate(max_points=Max('points'))['max_points'] or 0
+    total_points = contest_subs.aggregate(total_points=Sum('points'))['total_points'] or 0
+    last_activity = Submission.objects.filter(user=user).order_by('-created_at').first()
+
+    # --- Current Streak ---
+    today = timezone.now().date()
+    ac_dates = Submission.objects.filter(user=user, status='AC').dates('created_at', 'day', order='DESC')
+    streak_days = 0
+    for d in ac_dates:
+        if d == today - timedelta(days=streak_days):
+            streak_days += 1
+        else:
+            break
+
+    # --- Member Since ---
+    member_since = getattr(user, 'date_joined', None)
+
+
+    context = {
+        'profile_user': user,
+        'recent_submissions': recent_submissions,
+        'difficulty_stats': difficulty_stats,
+        'problems_solved': problems_solved,
+        'contests_count': contests_count,
+        'max_rating': max_points,
+        'total_points': total_points,
+        'last_activity': last_activity,
+        'streak_days': streak_days,
+        'contests': contests,
+        'user_rank': user_rank,
+        'member_since': member_since,
+    }
+
+    return render(request, 'profile.html', context)
+
+#
+# def user_profile_view(request, university_id):
+#     user = get_object_or_404(User, university_id=university_id)
+#
+#     # Last 5 submissions
+#     recent_submissions = Submission.objects.filter(user=user).order_by('-created_at')[:5]
+#
+#     difficulty_dict = {'Easy': 0, 'Medium': 0, 'Hard': 0}
+#     ac_subs = (
+#         Submission.objects.filter(user=user, status='AC')
+#         .values('problem__difficulty')
+#         .distinct()
+#         .annotate(count=Count('problem'))
+#     )
+#     for entry in ac_subs:
+#         diff = entry['problem__difficulty']
+#         if diff in difficulty_dict:
+#             difficulty_dict[diff] = entry['count']
+#
+#     problems_solved = sum(difficulty_dict.values())
+#
+#     user_rank = User.objects.filter(points__gt=user.points).count() + 1
+#
+#     contests_count = user.contestregistration_set.count()
+#     max_rating = user.points
+#
+#     return render(request, "profile.html", {
+#         'profile_user': user,
+#         'recent_submissions': recent_submissions,
+#         'difficulty_stats': difficulty_dict,
+#         'problems_solved': problems_solved,
+#         'contests_count': contests_count,
+#         'max_rating': max_rating,
+#         'user_rank': user_rank,
+#     })
+
 
 def problems_view(request):
-    problems = Problem.objects.all().order_by('problem_id')
+    problems = Problem.objects.all().order_by('difficulty')
 
     difficulty = request.GET.get('difficulty')
     created_by = request.GET.get('created_by')
@@ -112,11 +227,6 @@ def problems_view(request):
         problems = problems.filter(created_by__email__icontains=created_by)
 
     return render(request, 'problems/problems.html', {'problems': problems})
-
-def logout_view(request):
-    logout(request)
-    return redirect("login")
-
 
 @login_required
 def problem_crud(request, pk=None):
@@ -257,14 +367,21 @@ def contest_detail(request, contest_id):
     user_registered = registrations.filter(user=request.user).exists()
     total_registered = registrations.count()
 
-    now = localtime()
+    now = timezone.now()
+
+    if now < contest.start_time:
+        contest_status = "upcoming"
+    elif contest.start_time <= now <= contest.end_time:
+        contest_status = "running"
+    else:
+        contest_status = "finished"
 
     context = {
         "contest": contest,
         "registrations": registrations,
         "user_registered": user_registered,
         "total_registered": total_registered,
-        "now": now,
+        "contest_status": contest_status,
     }
     return render(request, "contests/contest_detail.html", context)
 
@@ -315,7 +432,7 @@ def contest_update(request, contest_id):
             return redirect('contest_detail', contest_id=contest_id)
     else:
         form = ContestForm(instance=contest)
-    return render(request, 'contests/create_contest.html', {'form': form})
+    return render(request, 'contests/contest_form.html', {'form': form})
 
 @login_required
 def contest_delete(request, contest_id):
@@ -325,32 +442,26 @@ def contest_delete(request, contest_id):
         return redirect('contest_list')
     return redirect('contest_list')
 
+
+
 @login_required
 def contest_register(request, contest_id):
     contest = get_object_or_404(Contest, id=contest_id)
 
     # Collect user info from custom user model
     registration, created = ContestRegistration.objects.get_or_create(
-        contest=contest,
         user=request.user,
+        contest=contest,
         defaults={
-            'name': getattr(request.user, 'full_name', 'Anonymous'),
-            'email': getattr(request.user, 'email', ''),
-            'student_id': getattr(request.user, 'university_id', ''),
+            'name': request.user.full_name,
+            'email': request.user.email,
+            'student_id': request.user.university_id
         }
     )
+    # registration.points = contest.user_points(request.user)
+    registration.save()
 
-    return redirect('contest_registered', contest_id=contest.id)
-
-@login_required
-def contest_registered(request, contest_id):
-    contest = get_object_or_404(Contest, id=contest_id)
-    registration = ContestRegistration.objects.filter(contest=contest, user=request.user).first()
-
-    return render(request, 'contests/contest_registered.html', {
-        'contest': contest,
-        'registration': registration
-    })
+    return redirect('contest_detail', contest_id=contest.id)
 
 @login_required
 def contest_problems(request, contest_id):
@@ -369,48 +480,28 @@ def contest_problems(request, contest_id):
 
     # Get latest submission status for each problem for the current user
     problem_status = {}
-    problem_status = {}
     for problem in problems:
-        latest_submission = Submission.objects.filter(
+        latest_submission = ContestSubmission.objects.filter(
             user=request.user,
             problem=problem
         ).order_by('-created_at').first()
+        problem_status[problem.problem_id] = latest_submission.status if latest_submission else "Not Attempted"
 
-        problem_status[problem.problem_id] = latest_submission.status if latest_submission else "—"
+
+
+    # Build a list of (problem, status) tuples for template
+    problem_list = []
+    for problem in problems:
+        status = problem_status.get(problem.problem_id, "Not Attempted")
+        problem_list.append((problem, status))
 
     context = {
         'contest': contest,
         'message': message,
-        'problems': problems,
-        'problem_status': problem_status,
+        'problem_list': problem_list,
     }
+
     return render(request, 'contests/contest_problems.html', context)
-
-@login_required
-def submit_contest_solution(request, contest_id, problem_id):
-    contest = get_object_or_404(Contest, id=contest_id)
-    problem = get_object_or_404(Problem, problem_id=problem_id)
-
-    if request.method == 'POST':
-        form = ContestSubmissionForm(request.POST, request.FILES)
-        if form.is_valid():
-            submission = form.save(commit=False)
-            submission.user = request.user
-            submission.problem = problem
-            submission.contest = contest
-            submission.save()
-            messages.success(request, "Submission uploaded successfully!")
-            return redirect('contest_problems', contest_id=contest.id)
-        else:
-            messages.error(request, "There was an error with your submission.")
-    else:
-        form = ContestSubmissionForm()
-
-    return render(request, 'contests/contest_problem_detail.html', {
-        'contest': contest,
-        'problem': problem,
-        'form': form,
-    })
 
 @login_required
 def contest_problem_detail(request, contest_id, problem_id):
@@ -421,16 +512,28 @@ def contest_problem_detail(request, contest_id, problem_id):
     if request.method == 'POST':
         submission_form = ContestSubmissionForm(request.POST, request.FILES)
         if submission_form.is_valid():
-            # Save the submission without committing yet
             submission = submission_form.save(commit=False)
             submission.user = request.user
             submission.contest = contest
             submission.problem = problem
-            submission.save()  # save to DB
+            submission.status = "P"  # Pending
+            submission.save()
 
-            # Redirect to contest submission detail page
-            return redirect('contests/contest_submission_detail', contest_id=contest.id, submission_id=submission.id)
+            # After submission is judged
+            verdict, points, results = judge_contest_submission(submission)
 
+            submission.status = verdict
+            submission.points = points
+            submission.test_results = results
+            submission.save()
+
+            # Update points
+            update_points(request.user, contest)
+            messages.success(request, f"Submission judged! Verdict: {verdict}, Points: {points}")
+            return redirect('contest_submission_detail', contest_id=contest.id, submission_id=submission.id)
+
+        else:
+            messages.error(request, "There was an error with your submission.")
 
     context = {
         'contest': contest,
@@ -451,9 +554,16 @@ def contest_submission_detail(request, contest_id, submission_id):
         code_content = submission.code_file.read().decode('utf-8')
         submission.code_file.close()
 
-    # Example: if you have a function to get test case results
-    # Replace with your actual test case evaluation logic
-    results = getattr(submission, 'test_results', None)  # list of dicts with input, expected, actual, stderr, verdict
+    # After submission is judged
+    verdict, points, results = judge_contest_submission(submission)
+
+    submission.status = verdict
+    submission.points = points
+    submission.test_results = results
+    submission.save()
+
+    # Update points
+    update_points(request.user, contest)
 
     context = {
         'contest': contest,
@@ -466,7 +576,10 @@ def contest_submission_detail(request, contest_id, submission_id):
 @login_required
 def contest_submission_list(request, contest_id):
     contest = get_object_or_404(Contest, id=contest_id)
-    submissions = Submission.objects.filter(contest=contest, user=request.user).order_by("-created_at")
+    submissions = ContestSubmission.objects.filter(
+        contest=contest,
+        user=request.user
+    ).order_by("-created_at")
 
     context = {
         "contest": contest,
@@ -474,13 +587,15 @@ def contest_submission_list(request, contest_id):
     }
     return render(request, "contests/contest_submission_list.html", context)
 
+
+
 User = get_user_model()
 def leaderboard_view(request):
     # Get all users ordered by points descending
-    users = User.objects.order_by('-points')
+    users = User.objects.filter(is_staff=False).order_by('-points')
 
     # Pagination: 10 per page
-    paginator = Paginator(users, 15)
+    paginator = Paginator(users, 5)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
@@ -575,12 +690,16 @@ def invite_member(request, group_id):
             if invited_user in group.members.all():
                 messages.warning(request, f"{invited_user.full_name} is already a member.")
             else:
-                GroupInvitation.objects.get_or_create(
+                invitation, created = GroupInvitation.objects.get_or_create(
                     group=group,
                     invited_user=invited_user,
-                    invited_by=request.user
+                    status='PENDING',  # only look for pending invitations
+                    defaults={'invited_by': request.user}
                 )
-                messages.success(request, f"Invitation sent to {email}")
+                if created:
+                    messages.success(request, f"Invitation sent to {email}")
+                else:
+                    messages.info(request, f"{invited_user.full_name} already has a pending invitation.")
         else:
             messages.error(request, "No user found with that email.")
 

@@ -83,34 +83,24 @@
                 </div>
             {% endif %}
 
-            <form method="POST" enctype="multipart/form-data" action="{% url 'submit_contest_solution' contest.id problem.problem_id %}">
-                {% csrf_token %}
-                {{ submission_form.non_field_errors }}
-
-                <div class="mb-2">
-                    {{ submission_form.language.label_tag }}
-                    {{ submission_form.language }}
-                    {% if submission_form.language.errors %}
-                        <div class="text-danger small">
-                            {{ submission_form.language.errors }}
-                        </div>
-                    {% endif %}
-                </div>
-
-                <div class="mb-2">
-                    {{ submission_form.code_file.label_tag }}
-                    {{ submission_form.code_file }}
-                    {% if submission_form.code_file.errors %}
-                        <div class="text-danger small">
-                            {{ submission_form.code_file.errors }}
-                        </div>
-                    {% endif %}
-                </div>
-
-                <button type="submit" class="btn btn-success w-100 mt-2">Submit</button>
+            <form method="POST" enctype="multipart/form-data" class="mt-3">
+              {% csrf_token %}
+              <div class="mb-2">
+                <label for="language">Language:</label>
+                {{ submission_form.language }}
+              </div>
+              <div class="mb-2">
+                <label for="code_file">Upload Code File:</label>
+                {{ submission_form.code_file }}
+              </div>
+              <button type="submit" class="btn btn-success">Submit</button>
             </form>
         </div>
     </aside>
+
+    <div class="d-flex gap-2 mb-5">
+        <a href="{% url 'contest_problems' contest.id %}" class="btn btn-primary">Back to Contest</a>
+    </div>
 </div>
 {% endblock %}
 

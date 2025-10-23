@@ -20,11 +20,11 @@
 
     {% if user.is_authenticated %}
         {% if user_registered %}
-            {% if now < contest.start_time %}
+            {% if contest_status == "upcoming" %}
                 <div class="alert alert-info mt-3">
                     You are registered. Contest will start {{ contest.start_time|date:"M d, Y H:i" }}.
                 </div>
-            {% elif now >= contest.start_time and now <= contest.end_time %}
+            {% elif contest_status == "running" %}
                 <a href="{% url 'contest_problems' contest.id %}" class="btn btn-success mt-2">
                     Enter Contest
                 </a>
